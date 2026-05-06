@@ -1,11 +1,14 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>基金实时监控助手</title>
     <!-- Ant Design Vue样式 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ant-design-vue@4.2.5/dist/reset.css">
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/ant-design-vue@4.2.5/dist/reset.css"
+    />
     <!-- dayjs (Ant Design Vue依赖) -->
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/plugin/advancedFormat.js"></script>
@@ -22,1442 +25,2123 @@
     <!-- ECharts -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: #f0f2f5;
-            min-height: 100vh;
-        }
-        .app-container {
-            min-height: 100vh;
-        }
-        /* 头部 */
-        .app-header {
-            background: linear-gradient(135deg, #1890ff 0%, #52c41a 100%);
-            padding: 24px;
-            color: white;
-            text-align: center;
-        }
-        .app-header h1 {
-            font-size: 28px;
-            margin-bottom: 8px;
-        }
-        .app-header .subtitle {
-            opacity: 0.9;
-            font-size: 14px;
-        }
-        /* 主内容 */
-        .main-content {
-            padding: 24px;
-            max-width: 1600px;
-            margin: 0 auto;
-        }
-        /* 统计卡片 */
-        .stat-card {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 16px;
-        }
-        .stat-card .stat-title {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-        .stat-card .stat-value {
-            font-size: 28px;
-            font-weight: 600;
-        }
-        .stat-card .stat-value.positive { color: #f5222d; }
-        .stat-card .stat-value.negative { color: #52c41a; }
-        /* 基金卡片 */
-        .fund-card {
-            background: white;
-            border-radius: 8px;
-            padding: 16px;
-            height: 100%;
-        }
-        .fund-card .fund-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 12px;
-        }
-        .fund-card .fund-name {
-            font-size: 16px;
-            font-weight: 600;
-            color: #333;
-        }
-        .fund-card .fund-code {
-            color: #999;
-            font-size: 12px;
-        }
-       .fund-card .positive { color: #f5222d; }
-       .fund-card .negative { color: #52c41a; }
-        .fund-card .stat-row {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-top: 12px;
-        }
-        .fund-card .stat-item {
-            text-align: center;
-            padding: 8px;
-            background: #fafafa;
-            border-radius: 4px;
-        }
-        .fund-card .stat-item .label {
-            font-size: 12px;
-            color: #999;
-        }
-        .fund-card .stat-item .value {
-            font-size: 16px;
-            font-weight: 500;
-            margin-top: 4px;
-        }
-        /* 提醒列表 */
-        .alert-item {
-            display: flex;
-            align-items: center;
-            padding: 12px;
-            background: #fafafa;
-            border-radius: 4px;
-            margin-bottom: 8px;
-            border-left: 3px solid #faad14;
-        }
-        .alert-item.danger { border-left-color: #f5222d; }
-        .alert-item .alert-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 12px;
-            font-size: 16px;
-        }
-        .alert-item .alert-content { flex: 1; }
-        .alert-item .alert-title {
-            font-weight: 500;
-            margin-bottom: 4px;
-        }
-        .alert-item .alert-message {
-            font-size: 12px;
-            color: #666;
-        }
-        /* 同步持仓模态框 */
-        .sync-modal .upload-area {
-            border: 2px dashed #d9d9d9;
-            border-radius: 8px;
-            padding: 40px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 16px;
-        }
-        .sync-modal .upload-area:hover {
-            border-color: #1890ff;
-        }
-        .sync-modal .upload-area.dragging {
-            border-color: #1890ff;
-            background: #e6f7ff;
-        }
-        .sync-modal .recognized-list {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .sync-modal .recognized-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px;
-            background: #fafafa;
-            border-radius: 4px;
-            margin-bottom: 8px;
-        }
-        .sync-modal .recognized-item .fund-info {
-            flex: 1;
-        }
-        .sync-modal .recognized-item .fund-name {
-            font-weight: 500;
-        }
-        .sync-modal .recognized-item .fund-code {
-            color: #999;
-            font-size: 12px;
-        }
-        /* 深色主题 */
-        body.dark-theme {
-            background: #1a1a2e !important;
-            color: #e0e0e0 !important;
-        }
-        body.dark-theme .main-content {
-            background: #1a1a2e;
-        }
-        body.dark-theme .stat-card,
-        body.dark-theme .fund-card {
-            background: #16213e !important;
-            color: #e0e0e0 !important;
-        }
-        body.dark-theme .fund-card .fund-name { color: #fff !important; }
-        body.dark-theme .fund-card .stat-item { background: #1a1a2e; }
-        body.dark-theme .fund-card .stat-item .label { color: #999 !important; }
-        body.dark-theme .fund-card .stat-item .value { color: #e0e0e0 !important; }
-        body.dark-theme .alert-item { background: #16213e; color: #e0e0e0; }
-        body.dark-theme .ant-card { background: #16213e !important; color: #e0e0e0 !important; }
-        body.dark-theme .ant-card-head { color: #fff !important; border-color: #333 !important; }
-        body.dark-theme .ant-card-body { color: #e0e0e0 !important; }
-        body.dark-theme .ant-table { background: #16213e !important; color: #e0e0e0 !important; }
-        body.dark-theme .ant-table-thead > tr > th { background: #1a1a2e !important; color: #fff !important; }
-        body.dark-theme .ant-table-tbody > tr > td { border-color: #333 !important; }
-        body.dark-theme .ant-modal-content { background: #16213e !important; color: #e0e0e0 !important; }
-        body.dark-theme .ant-modal-header { background: #16213e !important; color: #fff !important; }
-        body.dark-theme .ant-modal-title { color: #fff !important; }
-        body.dark-theme .ant-input,
-        body.dark-theme .ant-input-number,
-        body.dark-theme .ant-select-selector { background: #1a1a2e !important; color: #e0e0e0 !important; border-color: #444 !important; }
-        body.dark-theme .ant-input::placeholder { color: #666 !important; }
-        body.dark-theme .ant-btn-default { background: #1a1a2e !important; color: #e0e0e0 !important; border-color: #444 !important; }
-        body.dark-theme .ant-statistic-title { color: #999 !important; }
-        body.dark-theme .ant-statistic-content { color: #e0e0e0 !important; }
-        body.dark-theme .ant-descriptions-item-label { color: #999 !important; }
-        body.dark-theme .ant-descriptions-item-content { color: #e0e0e0 !important; }
-        body.dark-theme .ant-list-item { color: #e0e0e0 !important; border-color: #333 !important; }
-        body.dark-theme .ant-divider { border-color: #333 !important; }
-        body.dark-theme .ant-empty-description { color: #666 !important; }
-        body.dark-theme .ant-tabs-tab { color: #999 !important; }
-        body.dark-theme .ant-tabs-tab-active .ant-tabs-tab-btn { color: #1890ff !important; }
-        body.dark-theme .ant-checkbox-wrapper { color: #e0e0e0 !important; }
-        body.dark-theme .ant-radio-wrapper { color: #e0e0e0 !important; }
-        body.dark-theme .ant-form-item-label > label { color: #e0e0e0 !important; }
-        /* 持仓进度条 */
-        .position-bar {
-            height: 6px;
-            background: #e8e8e8;
-            border-radius: 3px;
-            margin-top: 8px;
-            overflow: hidden;
-        }
-        .position-bar .position-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #1890ff, #52c41a);
-            border-radius: 3px;
-            transition: width 0.5s;
-        }
-        body.dark-theme .position-bar { background: #333; }
-        /* 建议样式 */
-        .advice-tag {
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-        .advice-tag.add { background: #f6ffed; color: #52c41a; }
-        .advice-tag.reduce { background: #fff2f0; color: #f5222d; }
-        .advice-tag.hold { background: #fffbe6; color: #faad14; }
-        .advice-tag.buy { background: #e6f7ff; color: #1890ff; }
-        body.dark-theme .advice-tag.add { background: rgba(82, 196, 26, 0.2); }
-        body.dark-theme .advice-tag.reduce { background: rgba(245, 34, 45, 0.2); }
-        body.dark-theme .advice-tag.hold { background: rgba(250, 173, 20, 0.2); }
-        body.dark-theme .advice-tag.buy { background: rgba(24, 144, 255, 0.2); }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background: #f0f2f5;
+        min-height: 100vh;
+      }
+      .app-container {
+        min-height: 100vh;
+      }
+      /* 头部 */
+      .app-header {
+        background: linear-gradient(135deg, #1890ff 0%, #52c41a 100%);
+        padding: 24px;
+        color: white;
+        text-align: center;
+      }
+      .app-header h1 {
+        font-size: 28px;
+        margin-bottom: 8px;
+      }
+      .app-header .subtitle {
+        opacity: 0.9;
+        font-size: 14px;
+      }
+      /* 主内容 */
+      .main-content {
+        padding: 24px;
+        max-width: 1900px;
+        width: 1600px;
+        margin: 0 auto;
+      }
+      /* 统计卡片 */
+      .stat-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 16px;
+      }
+      .stat-card .stat-title {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 8px;
+      }
+      .stat-card .stat-value {
+        font-size: 28px;
+        font-weight: 600;
+      }
+      .stat-card .stat-value.positive {
+        color: #f5222d;
+      }
+      .stat-card .stat-value.negative {
+        color: #52c41a;
+      }
+      /* 基金卡片 */
+      .fund-card {
+        background: white;
+        border-radius: 8px;
+        padding: 16px;
+        height: 100%;
+      }
+      .fund-card .fund-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+      .fund-card .fund-name {
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+      }
+      .fund-card .fund-code {
+        color: #999;
+        font-size: 12px;
+      }
+      .fund-card .positive {
+        color: #f5222d;
+      }
+      .fund-card .negative {
+        color: #52c41a;
+      }
+      .fund-card .stat-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .fund-card .stat-item {
+        text-align: center;
+        padding: 8px;
+        background: #fafafa;
+        border-radius: 4px;
+      }
+      .fund-card .stat-item .label {
+        font-size: 12px;
+        color: #999;
+      }
+      .fund-card .stat-item .value {
+        font-size: 16px;
+        font-weight: 500;
+        margin-top: 4px;
+      }
+      /* 提醒列表 */
+      .alert-item {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        background: #fafafa;
+        border-radius: 4px;
+        margin-bottom: 8px;
+        border-left: 3px solid #faad14;
+      }
+      .alert-item.danger {
+        border-left-color: #f5222d;
+      }
+      .alert-item .alert-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 12px;
+        font-size: 16px;
+      }
+      .alert-item .alert-content {
+        flex: 1;
+      }
+      .alert-item .alert-title {
+        font-weight: 500;
+        margin-bottom: 4px;
+      }
+      .alert-item .alert-message {
+        font-size: 12px;
+        color: #666;
+      }
+      /* 同步持仓模态框 */
+      .sync-modal .upload-area {
+        border: 2px dashed #d9d9d9;
+        border-radius: 8px;
+        padding: 40px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-bottom: 16px;
+      }
+      .sync-modal .upload-area:hover {
+        border-color: #1890ff;
+      }
+      .sync-modal .upload-area.dragging {
+        border-color: #1890ff;
+        background: #e6f7ff;
+      }
+      .sync-modal .recognized-list {
+        max-height: 400px;
+        overflow-y: auto;
+      }
+      .sync-modal .recognized-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px;
+        background: #fafafa;
+        border-radius: 4px;
+        margin-bottom: 8px;
+      }
+      .sync-modal .recognized-item .fund-info {
+        flex: 1;
+      }
+      .sync-modal .recognized-item .fund-name {
+        font-weight: 500;
+      }
+      .sync-modal .recognized-item .fund-code {
+        color: #999;
+        font-size: 12px;
+      }
+      /* 深色主题 */
+      body.dark-theme {
+        background: #1a1a2e !important;
+        color: #e0e0e0 !important;
+      }
+      body.dark-theme .main-content {
+        background: #1a1a2e;
+      }
+      body.dark-theme .stat-card,
+      body.dark-theme .fund-card {
+        background: #16213e !important;
+        color: #e0e0e0 !important;
+      }
+      body.dark-theme .fund-card .fund-name {
+        color: #fff !important;
+      }
+      body.dark-theme .fund-card .stat-item {
+        background: #1a1a2e;
+      }
+      body.dark-theme .fund-card .stat-item .label {
+        color: #999 !important;
+      }
+      body.dark-theme .fund-card .stat-item .value {
+        color: #e0e0e0 !important;
+      }
+      body.dark-theme .alert-item {
+        background: #16213e;
+        color: #e0e0e0;
+      }
+      body.dark-theme .ant-card {
+        background: #16213e !important;
+        color: #e0e0e0 !important;
+      }
+      body.dark-theme .ant-card-head {
+        color: #fff !important;
+        border-color: #333 !important;
+      }
+      body.dark-theme .ant-card-body {
+        color: #e0e0e0 !important;
+      }
+      body.dark-theme .ant-table {
+        background: #16213e !important;
+        color: #e0e0e0 !important;
+      }
+      body.dark-theme .ant-table-thead > tr > th {
+        background: #1a1a2e !important;
+        color: #fff !important;
+      }
+      body.dark-theme .ant-table-tbody > tr > td {
+        border-color: #333 !important;
+      }
+      body.dark-theme .ant-modal-content {
+        background: #16213e !important;
+        color: #e0e0e0 !important;
+      }
+      body.dark-theme .ant-modal-header {
+        background: #16213e !important;
+        color: #fff !important;
+      }
+      body.dark-theme .ant-modal-title {
+        color: #fff !important;
+      }
+      body.dark-theme .ant-input,
+      body.dark-theme .ant-input-number,
+      body.dark-theme .ant-select-selector {
+        background: #1a1a2e !important;
+        color: #e0e0e0 !important;
+        border-color: #444 !important;
+      }
+      body.dark-theme .ant-input::placeholder {
+        color: #666 !important;
+      }
+      body.dark-theme .ant-btn-default {
+        background: #1a1a2e !important;
+        color: #e0e0e0 !important;
+        border-color: #444 !important;
+      }
+      body.dark-theme .ant-statistic-title {
+        color: #999 !important;
+      }
+      body.dark-theme .ant-statistic-content {
+        color: #e0e0e0 !important;
+      }
+      body.dark-theme .ant-descriptions-item-label {
+        color: #999 !important;
+      }
+      body.dark-theme .ant-descriptions-item-content {
+        color: #e0e0e0 !important;
+      }
+      body.dark-theme .ant-list-item {
+        color: #e0e0e0 !important;
+        border-color: #333 !important;
+      }
+      body.dark-theme .ant-divider {
+        border-color: #333 !important;
+      }
+      body.dark-theme .ant-empty-description {
+        color: #666 !important;
+      }
+      body.dark-theme .ant-tabs-tab {
+        color: #999 !important;
+      }
+      body.dark-theme .ant-tabs-tab-active .ant-tabs-tab-btn {
+        color: #1890ff !important;
+      }
+      body.dark-theme .ant-checkbox-wrapper {
+        color: #e0e0e0 !important;
+      }
+      body.dark-theme .ant-radio-wrapper {
+        color: #e0e0e0 !important;
+      }
+      body.dark-theme .ant-form-item-label > label {
+        color: #e0e0e0 !important;
+      }
+      /* 持仓进度条 */
+      .position-bar {
+        height: 6px;
+        background: #e8e8e8;
+        border-radius: 3px;
+        margin-top: 8px;
+        overflow: hidden;
+      }
+      .position-bar .position-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #1890ff, #52c41a);
+        border-radius: 3px;
+        transition: width 0.5s;
+      }
+      body.dark-theme .position-bar {
+        background: #333;
+      }
+      /* 建议样式 */
+      .advice-tag {
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+      }
+      .advice-tag.add {
+        background: #f6ffed;
+        color: #52c41a;
+      }
+      .advice-tag.reduce {
+        background: #fff2f0;
+        color: #f5222d;
+      }
+      .advice-tag.hold {
+        background: #fffbe6;
+        color: #faad14;
+      }
+      .advice-tag.buy {
+        background: #e6f7ff;
+        color: #1890ff;
+      }
+      body.dark-theme .advice-tag.add {
+        background: rgba(82, 196, 26, 0.2);
+      }
+      body.dark-theme .advice-tag.reduce {
+        background: rgba(245, 34, 45, 0.2);
+      }
+      body.dark-theme .advice-tag.hold {
+        background: rgba(250, 173, 20, 0.2);
+      }
+      body.dark-theme .advice-tag.buy {
+        background: rgba(24, 144, 255, 0.2);
+      }
     </style>
-</head>
-<body>
-{% raw %}
+  </head>
+  <body>
+    {% raw %}
     <div id="app">
-        <!-- 配置Provider -->
-        <a-config-provider :locale="zhCN">
-            <a-layout class="app-container">
-                <!-- 头部 -->
-                <div class="app-header">
-                    <h1>📊 基金实时监控助手</h1>
-                    <div class="subtitle">实时监控 · 智能建议 · 风险提醒</div>
-                    <a-space style="margin-top: 16px;" :size="16">
-                        <span><a-badge :status="isTrading ? 'processing' : 'default'" ></a-badge>{{ isTrading ? '实时监控中' : '非交易时段' }}</span>
-                        <span>刷新间隔: {{ refreshInterval }}秒</span>
-                        <span>上次更新: {{ lastUpdate }}</span>
-                    </a-space>
-                </div>
+      <!-- 配置Provider -->
+      <a-config-provider :locale="zhCN">
+        <a-layout class="app-container">
+          <!-- 头部 -->
+          <div class="app-header">
+            <h1>📊 基金实时监控助手</h1>
+            <div class="subtitle">实时监控 · 智能建议 · 风险提醒</div>
+            <a-space style="margin-top: 16px" :size="16">
+              <span
+                ><a-badge
+                  :status="isTrading ? 'processing' : 'default'"
+                ></a-badge
+                >{{ isTrading ? '实时监控中' : '非交易时段' }}</span
+              >
+              <span>刷新间隔: {{ refreshInterval }}秒</span>
+              <span>上次更新: {{ lastUpdate }}</span>
+            </a-space>
+          </div>
 
-                <!-- 主内容 -->
-                <div class="main-content">
-                    <!-- 工具栏 -->
-                    <a-card style="margin-bottom: 16px;" :bordered="false">
-                        <a-row :gutter="16" align="middle">
-                            <a-col :span="12">
-                                <a-space>
-                                    <a-input v-model:value="addForm.fundCode" placeholder="基金代码" style="width: 120px;" maxlength="6" ></a-input>
-                                    <a-input-number v-model:value="addForm.currentAmount" placeholder="持仓金额" style="width: 130px;" :min="0" :precision="2" ></a-input-number>
-                                    <a-input-number v-model:value="addForm.maxAmount" placeholder="上限金额" style="width: 130px;" :min="0" :precision="2" ></a-input-number>
-                                    <a-input-number v-model:value="addForm.holdingReturnRate" placeholder="收益率%" style="width: 110px;" :precision="2" ></a-input-number>
-                                    <a-button type="primary" @click="addFund" :loading="adding">添加</a-button>
-                                </a-space>
-                            </a-col>
-                            <a-col :span="12" style="text-align: right;">
-                                <a-space>
-                                    <a-button @click="refreshData" :loading="refreshing">🔄 刷新</a-button>
-                                    <a-button @click="showRankModal">🏆 当日榜单</a-button>
-                                    <a-button @click="getReport">📋 操作建议</a-button>
-                                    <a-button @click="showQueryModal">🔍 基金查询</a-button>
-                                    <a-button type="primary" @click="showSyncModal">📥 同步持仓</a-button>
-                                    <a-popconfirm title="确定清除所有基金？" @confirm="clearAllFunds">
-                                        <a-button danger>🗑️ 清除全部</a-button>
-                                    </a-popconfirm>
-                                </a-space>
-                            </a-col>
-                        </a-row>
-                    </a-card>
+          <!-- 主内容 -->
+          <div class="main-content">
+            <!-- 功能模块区域 -->
+            <a-row :gutter="16" style="margin-bottom: 16px">
+              <!-- 添加基金模块 -->
+              <a-col :span="12">
+                <a-card title="📌 添加基金" :bordered="false" size="small">
+                  <a-space wrap>
+                    <a-input
+                      v-model:value="addForm.fundCode"
+                      placeholder="基金代码"
+                      style="width: 120px"
+                      maxlength="6"
+                    ></a-input>
+                    <a-input-number
+                      v-model:value="addForm.currentAmount"
+                      placeholder="持仓金额"
+                      style="width: 130px"
+                      :min="0"
+                      :precision="2"
+                    ></a-input-number>
+                    <a-input-number
+                      v-model:value="addForm.maxAmount"
+                      placeholder="上限金额"
+                      style="width: 130px"
+                      :min="0"
+                      :precision="2"
+                    ></a-input-number>
+                    <a-input-number
+                      v-model:value="addForm.holdingReturnRate"
+                      placeholder="收益率%"
+                      style="width: 110px"
+                      :precision="2"
+                    ></a-input-number>
+                    <a-button type="primary" @click="addFund" :loading="adding"
+                      >添加</a-button
+                    >
+                    <a-button @click="showQueryModal">🔍 基金查询</a-button>
+                  </a-space>
+                </a-card>
+              </a-col>
+              <!-- 快捷操作模块 -->
+              <a-col :span="12">
+                <a-card title="⚡ 快捷操作" :bordered="false" size="small">
+                  <a-space wrap>
+                    <a-button @click="refreshData" :loading="refreshing"
+                      >🔄 刷新</a-button
+                    >
+                    <a-button @click="showRankModal">🏆 当日榜单</a-button>
+                    <a-button @click="getReport">📋 操作建议</a-button>
+                    <a-button type="primary" @click="showSyncModal"
+                      >📥 同步持仓</a-button
+                    >
+                    <a-popconfirm
+                      title="确定清除所有基金？"
+                      @confirm="clearAllFunds"
+                    >
+                      <a-button danger>🗑️ 清除全部</a-button>
+                    </a-popconfirm>
+                  </a-space>
+                </a-card>
+              </a-col>
+            </a-row>
 
-                    <!-- 设置栏：数据源 + 布局 -->
-                    <a-card style="margin-bottom: 16px;" :bordered="false" v-if="funds.length > 0">
-                        <a-row justify="space-between" align="middle">
-                            <a-col>
-                                <a-space>
-                                    <span style="color: #666;">数据源:</span>
-                                    <a-select v-model:value="currentDatasource" style="width: 130px;" @change="changeDatasource">
-                                        <a-select-option value="tiantian">天天基金</a-select-option>
-                                        <a-select-option value="danjuan">蛋卷基金</a-select-option>
-                                        <a-select-option value="alipay">蚂蚁财富</a-select-option>
-                                        <a-select-option value="howbuy">且慢</a-select-option>
-                                    </a-select>
-                                </a-space>
-                            </a-col>
-                            <a-col>
-                                <a-space>
-                                    <span style="color: #666;">卡片布局:</span>
-                                    <a-radio-group v-model:value="cardLayout" button-style="solid" size="small">
-                                        <a-radio-button value="4">4列</a-radio-button>
-                                        <a-radio-button value="3">3列</a-radio-button>
-                                        <a-radio-button value="2">2列</a-radio-button>
-                                    </a-radio-group>
-                                </a-space>
-                            </a-col>
-                        </a-row>
-                    </a-card>
-
-                    <!-- 当日收益统计 -->
-                    <a-row :gutter="16" style="margin-bottom: 16px;" v-if="funds.length > 0">
-                        <a-col :span="6">
-                            <a-card class="stat-card" :bordered="false">
-                                <div class="stat-title">当日预估收益</div>
-                                <div class="stat-value" :class="dailyProfit >= 0 ? 'positive' : 'negative'">
-                                    ¥{{ dailyProfit >= 0 ? '+' : '' }}{{ dailyProfit.toFixed(2) }}
-                                </div>
-                            </a-card>
-                        </a-col>
-                        <a-col :span="6">
-                            <a-card class="stat-card" :bordered="false">
-                                <div class="stat-title">持仓总额</div>
-                                <div class="stat-value">¥{{ totalPosition.toLocaleString() }}</div>
-                            </a-card>
-                        </a-col>
-                        <a-col :span="6">
-                            <a-card class="stat-card" :bordered="false">
-                                <div class="stat-title">持仓基金</div>
-                                <div class="stat-value">{{ positionCount }} 只</div>
-                            </a-card>
-                        </a-col>
-                        <a-col :span="6">
-                            <a-card class="stat-card" :bordered="false">
-                                <div class="stat-title">平均涨跌</div>
-                                <div class="stat-value" :class="avgChange >= 0 ? 'positive' : 'negative'">
-                                    {{ avgChange >= 0 ? '+' : '' }}{{ avgChange.toFixed(2) }}%
-                                </div>
-                            </a-card>
-                        </a-col>
-                    </a-row>
-
-                    <!-- 提醒面板 -->
-                    <a-card v-if="alerts.length > 0" title="⚠️ 风险提醒" style="margin-bottom: 16px;" :bordered="false">
-                        <template #extra>
-                            <a-space>
-                                <a-button type="link" @click="alertModalVisible = true">全屏预览</a-button>
-                                <a-button type="link" @click="clearAlerts">清除</a-button>
-                            </a-space>
-                        </template>
-                        <div style="max-height: 200px; overflow-y: auto;">
-                            <div v-for="alert in alerts" :key="alert.time" class="alert-item" :class="{ danger: alert.level === 'danger' }">
-                                <div class="alert-icon">{{ getAlertIcon(alert.alert_type) }}</div>
-                                <div class="alert-content">
-                                    <div class="alert-title">{{ alert.fund_name }} - {{ alert.alert_type }}</div>
-                                    <div class="alert-message">{{ alert.message }}</div>
-                                </div>
-                                <span style="color: #999; font-size: 12px;">{{ alert.time?.split(' ')[1] }}</span>
-                            </div>
-                        </div>
-                    </a-card>
-
-                    <!-- 基金卡片网格 -->
-                    <a-row :gutter="[16, 16]" v-if="funds.length > 0">
-                        <a-col :xs="24" :sm="12" :md="cardLayout === '4' ? 6 : (cardLayout === '3' ? 8 : 12)" v-for="fund in funds" :key="fund.fund_code">
-                            <a-card class="fund-card" :bordered="false" hoverable>
-                                <div class="fund-header">
-                                    <div>
-                                        <div class="fund-name">{{ fund.fund_name || fund.fund_code }}</div>
-                                        <div class="fund-code">{{ fund.fund_code }}</div>
-                                    </div>
-                                    <a-tag :color="getRiskColor(fund.risk_level?.level)">{{ fund.risk_level?.label || '中风险' }}</a-tag>
-                                </div>
-
-                                <!-- 持仓收益 -->
-                                <a-alert v-if="fund.current_amount > 0" :type="fund.estimated_change >= 0 ? 'error' : 'success'" style="margin-bottom: 12px;">
-                                    <template #message>
-                                        <div style="display: flex; justify-content: space-between;">
-                                            <span>预估收益</span>
-                                            <span style="font-weight: 600;font-size: 18px;" :class="formatMoney(calculateProfit(fund)) >= 0 ? 'positive' : 'negative'">¥{{ formatMoney(calculateProfit(fund)) }}</span>
-                                        </div>
-                                    </template>
-                                    <template #description>
-                                        <div style="display: flex; justify-content: space-between; font-size: 12px;">
-                                            <span>持仓 ¥{{ fund.current_amount?.toLocaleString() }}</span>
-                                            <span>{{ fund.estimated_time || '--' }}</span>
-                                        </div>
-                                    </template>
-                                </a-alert>
-
-                                <!-- 统计数据 -->
-                                <div class="stat-row">
-                                    <div class="stat-item">
-                                        <div class="label">最新净值</div>
-                                        <div class="value">{{ fund.nav || '--' }}</div>
-                                    </div>
-                                    <div class="stat-item">
-                                        <div class="label">估算净值</div>
-                                        <div class="value">{{ fund.estimated_nav || '--' }}</div>
-                                    </div>
-                                    <div class="stat-item">
-                                        <div class="label">估算涨跌</div>
-                                        <div class="value" :style="{ color: fund.estimated_change >= 0 ? '#f5222d' : '#52c41a' }">
-                                            {{ fund.estimated_change >= 0 ? '+' : '' }}{{ fund.estimated_change?.toFixed(2) }}%
-                                        </div>
-                                    </div>
-                                    <div class="stat-item">
-                                        <div class="label">持有收益率</div>
-                                        <div class="value" :style="{ color: fund.holding_return_rate >= 0 ? '#f5222d' : '#52c41a' }">
-                                            {{ fund.holding_return_rate ? (fund.holding_return_rate >= 0 ? '+' : '') + fund.holding_return_rate.toFixed(2) + '%' : '--' }}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- 持仓进度 -->
-                                <div v-if="fund.max_amount > 0" style="margin-top: 12px;">
-                                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666;">
-                                        <span>持仓: ¥{{ fund.current_amount?.toLocaleString() }}</span>
-                                        <span>{{ getPositionPercent(fund) }}%</span>
-                                    </div>
-                                    <div class="position-bar">
-                                        <div class="position-fill" :style="{ width: getPositionPercent(fund) + '%' }"></div>
-                                    </div>
-                                </div>
-
-                                <!-- 操作建议 -->
-                                <div v-if="fundAdvice[fund.fund_code]" style="margin-top: 12px;">
-                                    <span class="advice-tag" :class="getAdviceClass(fundAdvice[fund.fund_code].advice_type)">
-                                        {{ fundAdvice[fund.fund_code].advice_type }}
-                                    </span>
-                                    <span style="font-size: 12px; color: #666; margin-left: 8px;">{{ fundAdvice[fund.fund_code].reason }}</span>
-                                </div>
-
-                                <!-- 操作按钮 -->
-                                <div style="margin-top: 12px; display: flex; justify-content: center; gap: 12px;">
-                                    <a-button @click="openEditModal(fund)" style="min-width: 80px;">编辑</a-button>
-                                    <a-popconfirm title="确定移除？" @confirm="removeFund(fund.fund_code)">
-                                        <a-button danger style="min-width: 80px;">移除</a-button>
-                                    </a-popconfirm>
-                                </div>
-                            </a-card>
-                        </a-col>
-                    </a-row>
-
-                    <!-- 空状态 -->
-                    <a-empty v-else description="暂无监控基金，请添加基金" style="margin-top: 100px;" ></a-empty>
-                </div>
-            </a-layout>
-
-            <!-- 编辑持仓模态框 -->
-            <a-modal v-model:open="editModalVisible" title="编辑持仓" @ok="savePosition" :confirmLoading="saving">
-                <a-form layout="vertical">
-                    <a-form-item label="基金名称">
-                        <a-input :value="editForm.fundName" readonly ></a-input>
-                    </a-form-item>
-                    <a-form-item label="当前持仓金额">
-                        <a-input-number v-model:value="editForm.currentAmount" style="width: 100%;" :min="0" :precision="2" ></a-input-number>
-                    </a-form-item>
-                    <a-form-item label="持仓上限金额">
-                        <a-input-number v-model:value="editForm.maxAmount" style="width: 100%;" :min="0" :precision="2" ></a-input-number>
-                    </a-form-item>
-                    <a-form-item label="持有收益率(%)">
-                        <a-input-number v-model:value="editForm.holdingReturnRate" style="width: 100%;" :precision="2" ></a-input-number>
-                    </a-form-item>
-                </a-form>
-            </a-modal>
-
-            <!-- 风险提醒全屏预览模态框 -->
-            <a-modal v-model:open="alertModalVisible" title="⚠️ 风险提醒详情" :footer="null" width="800px">
-                <a-list :dataSource="alerts" itemLayout="horizontal">
-                    <template #renderItem="{ item }">
-                        <a-list-item>
-                            <a-list-item-meta :title="item.fund_name + ' - ' + item.alert_type" :description="item.message">
-                                <template #avatar>
-                                    <a-avatar :style="{ backgroundColor: item.level === 'danger' ? '#f5222d' : '#faad14' }">
-                                        {{ getAlertIcon(item.alert_type) }}
-                                    </a-avatar>
-                                </template>
-                            </a-list-item-meta>
-                            <template #actions>
-                                <span>{{ item.time }}</span>
-                            </template>
-                        </a-list-item>
-                    </template>
-                </a-list>
-            </a-modal>
-
-            <!-- 当日榜单模态框 -->
-            <a-modal v-model:open="rankModalVisible" title="🏆 当日涨幅榜单" :footer="null" width="700px">
-                <a-table :data-source="rankList" :pagination="false" row-key="fund_code">
-                    <a-table-column title="排名" key="rank" width="60" align="center">
-                        <template #default="{ index }">
-                            <span v-if="index < 3" style="display: inline-block; width: 24px; height: 24px; line-height: 24px; text-align: center; border-radius: 4px; color: #fff;" :style="{ background: ['gold', 'silver', 'orange'][index] }">{{ index + 1 }}</span>
-                            <span v-else>{{ index + 1 }}</span>
-                        </template>
-                    </a-table-column>
-                    <a-table-column title="基金名称" data-index="fund_name"></a-table-column>
-                    <a-table-column title="基金代码" data-index="fund_code" width="100"></a-table-column>
-                    <a-table-column title="估算涨跌" key="estimated_change" width="100" align="right" :sorter="(a, b) => (a.estimated_change || 0) - (b.estimated_change || 0)">
-                        <template #default="{ record }">
-                            <span :style="{ color: record.estimated_change >= 0 ? '#f5222d' : '#52c41a', fontWeight: 600 }">
-                                {{ record.estimated_change >= 0 ? '+' : '' }}{{ record.estimated_change?.toFixed(2) }}%
-                            </span>
-                        </template>
-                    </a-table-column>
-                    <a-table-column title="预估收益" key="profit" width="100" align="right" :sorter="(a, b) => (a.current_amount * (a.estimated_change || 0) / 100) - (b.current_amount * (b.estimated_change || 0) / 100)">
-                        <template #default="{ record }">
-                            <span :style="{ color: (record.current_amount * (record.estimated_change || 0) / 100) >= 0 ? '#f5222d' : '#52c41a' }">
-                                ¥{{ ((record.current_amount * (record.estimated_change || 0) / 100) || 0).toFixed(2) }}
-                            </span>
-                        </template>
-                    </a-table-column>
-                </a-table>
-            </a-modal>
-
-            <!-- 操作建议模态框 -->
-            <a-modal v-model:open="reportModalVisible" title="📋 操作建议" :footer="null" width="700px">
-                <div v-if="reportLoading" style="text-align: center; padding: 40px;">
-                    <span>加载中...</span>
-                </div>
-                <div v-else-if="report">
-                    <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
-                        <div v-for="item in reportSummary" :key="item.label" style="text-align: center; min-width: 80px;">
-                            <div style="color: #999; font-size: 12px;">{{ item.label }}</div>
-                            <div style="font-size: 24px; font-weight: 600;">{{ item.value }}</div>
-                        </div>
-                    </div>
-                    <hr style="border: none; border-top: 1px solid #f0f0f0; margin: 16px 0;" />
-
-                    <div v-for="item in report.advices" :key="item.fund_code" style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
-                        <div style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; margin-right: 12px;" :style="{ background: getAdviceAvatarColor(item.advice_type) }">
-                            {{ item.advice_type?.slice(2, 4) }}
-                        </div>
-                        <div style="flex: 1;">
-                            <div style="font-weight: 500;">{{ item.fund_name }} ({{ item.fund_code }})</div>
-                            <div style="color: #999; font-size: 12px;">{{ item.reason }}</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <span class="advice-tag" :class="getAdviceClass(item.advice_type)">{{ item.advice_type }}</span>
-                            <div v-if="item.suggested_amount > 0" style="margin-top: 4px; font-size: 12px;">¥{{ item.suggested_amount.toFixed(2) }}</div>
-                        </div>
-                    </div>
-                </div>
-            </a-modal>
-
-            <!-- 基金查询模态框 -->
-            <a-modal v-model:open="queryModalVisible" title="🔍 基金查询" :footer="null" width="900px">
-                <a-space style="margin-bottom: 16px;">
-                    <a-input v-model:value="queryFundCode" placeholder="输入基金代码" style="width: 150px;" maxlength="6" @pressEnter="queryFund" ></a-input>
-                    <a-button type="primary" @click="queryFund" :loading="queryLoading">查询</a-button>
-                </a-space>
-                <div v-if="queryResult">
-                    <a-descriptions :column="3" bordered size="small">
-                        <a-descriptions-item label="基金名称" :span="2">{{ queryResult.fund_name }}</a-descriptions-item>
-                        <a-descriptions-item label="基金代码">{{ queryResult.fund_code }}</a-descriptions-item>
-                        <a-descriptions-item label="当前涨跌">
-                            <span :style="{ color: queryResult.estimated_change >= 0 ? '#f5222d' : '#52c41a' }">
-                                {{ queryResult.estimated_change >= 0 ? '+' : '' }}{{ queryResult.estimated_change?.toFixed(2) }}%
-                            </span>
-                        </a-descriptions-item>
-                        <a-descriptions-item label="近一年涨幅">
-                            <span :style="{ color: (queryResult.returns?.one_year || 0) >= 0 ? '#f5222d' : '#52c41a' }">
-                                {{ (queryResult.returns?.one_year || 0) >= 0 ? '+' : '' }}{{ (queryResult.returns?.one_year || 0).toFixed(2) }}%
-                            </span>
-                        </a-descriptions-item>
-                        <a-descriptions-item label="基金规模">{{ queryResult.scale }}</a-descriptions-item>
-                        <a-descriptions-item label="所属板块">{{ queryResult.sector }}</a-descriptions-item>
-                        <a-descriptions-item label="基金公司">{{ queryResult.company }}</a-descriptions-item>
-                        <a-descriptions-item label="基金经理">{{ queryResult.manager }}</a-descriptions-item>
-                    </a-descriptions>
-                    <a-divider>净值走势</a-divider>
-                    <a-radio-group v-model:value="queryPeriod" @change="loadQueryHistory" style="margin-bottom: 16px;">
-                        <a-radio-button value="1m">近1月</a-radio-button>
-                        <a-radio-button value="3m">近3月</a-radio-button>
-                        <a-radio-button value="1y">近1年</a-radio-button>
-                        <a-radio-button value="3y">近3年</a-radio-button>
+            <!-- 设置栏：数据源 + 布局 -->
+            <a-card
+              style="margin-bottom: 16px"
+              :bordered="false"
+              v-if="funds.length > 0"
+            >
+              <a-row justify="space-between" align="middle">
+                <a-col>
+                  <a-space>
+                    <span style="color: #666">数据源:</span>
+                    <a-select
+                      v-model:value="currentDatasource"
+                      style="width: 130px"
+                      @change="changeDatasource"
+                    >
+                      <a-select-option value="tiantian"
+                        >天天基金</a-select-option
+                      >
+                      <a-select-option value="danjuan"
+                        >蛋卷基金</a-select-option
+                      >
+                      <a-select-option value="alipay">蚂蚁财富</a-select-option>
+                      <a-select-option value="howbuy">且慢</a-select-option>
+                    </a-select>
+                  </a-space>
+                </a-col>
+                <a-col>
+                  <a-space>
+                    <span style="color: #666">卡片布局:</span>
+                    <a-radio-group
+                      v-model:value="cardLayout"
+                      button-style="solid"
+                      size="small"
+                    >
+                      <a-radio-button value="4">4列</a-radio-button>
+                      <a-radio-button value="3">3列</a-radio-button>
+                      <a-radio-button value="2">2列</a-radio-button>
                     </a-radio-group>
-                    <div ref="queryChartRef" style="height: 300px;"></div>
-                    <a-divider>持仓分布</a-divider>
-                    <a-row :gutter="16">
-                        <a-col :span="12">
-                            <div ref="queryPieChartRef" style="height: 250px;"></div>
-                        </a-col>
-                        <a-col :span="12">
-                            <a-list :dataSource="queryHoldings" size="small" style="max-height: 250px; overflow-y: auto;">
-                                <template #renderItem="{ item, index }">
-                                    <a-list-item>
-                                        <span>{{ index + 1 }}. {{ item.name }}</span>
-                                        <span style="color: #1890ff;">{{ item.ratio?.toFixed(2) }}%</span>
-                                    </a-list-item>
-                                </template>
-                            </a-list>
-                        </a-col>
-                    </a-row>
-                    <div style="text-align: center; margin-top: 16px;">
-                        <a-button type="primary" @click="addQueriedFund">添加到监控</a-button>
+                  </a-space>
+                </a-col>
+              </a-row>
+            </a-card>
+
+            <!-- 当日收益统计 -->
+            <a-row
+              :gutter="16"
+              style="margin-bottom: 16px"
+              v-if="funds.length > 0"
+            >
+              <a-col :span="6">
+                <a-card class="stat-card" :bordered="false">
+                  <div class="stat-title">当日预估收益</div>
+                  <div
+                    class="stat-value"
+                    :class="dailyProfit >= 0 ? 'positive' : 'negative'"
+                  >
+                    ¥{{ dailyProfit >= 0 ? '+' : '' }}{{ dailyProfit.toFixed(2)
+                    }}
+                  </div>
+                </a-card>
+              </a-col>
+              <a-col :span="6">
+                <a-card class="stat-card" :bordered="false">
+                  <div class="stat-title">持仓总额</div>
+                  <div class="stat-value">
+                    ¥{{ totalPosition.toLocaleString() }}
+                  </div>
+                </a-card>
+              </a-col>
+              <a-col :span="6">
+                <a-card class="stat-card" :bordered="false">
+                  <div class="stat-title">持仓基金</div>
+                  <div class="stat-value">{{ positionCount }} 只</div>
+                </a-card>
+              </a-col>
+              <a-col :span="6">
+                <a-card class="stat-card" :bordered="false">
+                  <div class="stat-title">平均涨跌</div>
+                  <div
+                    class="stat-value"
+                    :class="avgChange >= 0 ? 'positive' : 'negative'"
+                  >
+                    {{ avgChange >= 0 ? '+' : '' }}{{ avgChange.toFixed(2) }}%
+                  </div>
+                </a-card>
+              </a-col>
+            </a-row>
+
+            <!-- 提醒面板 -->
+            <a-card
+              v-if="alerts.length > 0"
+              title="⚠️ 风险提醒"
+              style="margin-bottom: 16px"
+              :bordered="false"
+            >
+              <template #extra>
+                <a-space>
+                  <a-button type="link" @click="alertModalVisible = true"
+                    >全屏预览</a-button
+                  >
+                  <a-button type="link" @click="clearAlerts">清除</a-button>
+                </a-space>
+              </template>
+              <div style="max-height: 200px; overflow-y: auto">
+                <div
+                  v-for="alert in alerts"
+                  :key="alert.time"
+                  class="alert-item"
+                  :class="{ danger: alert.level === 'danger' }"
+                >
+                  <div class="alert-icon">
+                    {{ getAlertIcon(alert.alert_type) }}
+                  </div>
+                  <div class="alert-content">
+                    <div class="alert-title">
+                      {{ alert.fund_name }} - {{ alert.alert_type }}
                     </div>
+                    <div class="alert-message">{{ alert.message }}</div>
+                  </div>
+                  <span style="color: #999; font-size: 12px"
+                    >{{ alert.time?.split(' ')[1] }}</span
+                  >
                 </div>
-            </a-modal>
+              </div>
+            </a-card>
 
-            <!-- 同步持仓模态框 -->
-            <a-modal v-model:open="syncModalVisible" title="📥 同步持仓" :footer="null" width="800px" class="sync-modal">
-                <a-tabs v-model:activeKey="syncTab">
-                    <a-tab-pane key="upload" tab="图片识别">
-                        <div class="upload-area"
-                             @click="triggerUpload"
-                             @dragover.prevent="dragOver = true"
-                             @dragleave="dragOver = false"
-                             @drop.prevent="handleDrop"
-                             :class="{ dragging: dragOver }">
-                            <input type="file" ref="fileInput" @change="handleFileSelect" accept="image/*" style="display: none;" multiple>
-                            <a-icon type="cloud-upload" style="font-size: 48px; color: #1890ff;" ></a-icon>
-                            <p style="margin-top: 16px; color: #666;">点击或拖拽图片到此处</p>
-                            <p style="font-size: 12px; color: #999;">支持天天基金、支付宝、券商持仓截图</p>
-                        </div>
+            <!-- 基金卡片网格 -->
+            <a-row :gutter="[16, 16]" v-if="funds.length > 0">
+              <a-col
+                :xs="24"
+                :sm="12"
+                :md="cardLayout === '4' ? 6 : (cardLayout === '3' ? 8 : 12)"
+                v-for="fund in funds"
+                :key="fund.fund_code"
+              >
+                <a-card class="fund-card" :bordered="false" hoverable>
+                  <div class="fund-header">
+                    <div>
+                      <div class="fund-name">
+                        {{ fund.fund_name || fund.fund_code }}
+                      </div>
+                      <div class="fund-code">{{ fund.fund_code }}</div>
+                    </div>
+                    <a-tag :color="getRiskColor(fund.risk_level?.level)"
+                      >{{ fund.risk_level?.label || '中风险' }}</a-tag
+                    >
+                  </div>
 
-                        <a-progress v-if="ocrProgress > 0 && ocrProgress < 100" :percent="Math.floor(ocrProgress)" status="active" style="margin-bottom: 16px;"></a-progress>
+                  <!-- 持仓收益 -->
+                  <a-alert
+                    v-if="fund.current_amount > 0"
+                    :type="fund.estimated_change >= 0 ? 'error' : 'success'"
+                    style="margin-bottom: 12px"
+                  >
+                    <template #message>
+                      <div
+                        style="display: flex; justify-content: space-between"
+                      >
+                        <span>预估收益</span>
+                        <span
+                          style="font-weight: 600; font-size: 18px"
+                          :class="formatMoney(calculateProfit(fund)) >= 0 ? 'positive' : 'negative'"
+                          >¥{{ formatMoney(calculateProfit(fund)) }}</span
+                        >
+                      </div>
+                    </template>
+                    <template #description>
+                      <div
+                        style="
+                          display: flex;
+                          justify-content: space-between;
+                          font-size: 12px;
+                        "
+                      >
+                        <span
+                          >持仓 ¥{{ fund.current_amount?.toLocaleString()
+                          }}</span
+                        >
+                        <span>{{ fund.estimated_time || '--' }}</span>
+                      </div>
+                    </template>
+                  </a-alert>
 
-                        <!-- 图片识别结果 -->
-                        <div v-if="recognizedFunds.length > 0" class="recognized-list" style="margin-top: 16px;">
-                            <a-divider>识别结果 ({{ recognizedFunds.length }}只基金)</a-divider>
-                            <div v-for="(fund, index) in recognizedFunds" :key="index" class="recognized-item">
-                                <input type="checkbox" v-model="fund.selected" style="margin-right: 12px; width: 18px; height: 18px;" />
-                                <div class="fund-info">
-                                    <div class="fund-name">{{ fund.fund_name || '待查询' }} ({{ fund.fund_code || '待匹配' }})</div>
-                                    <div class="fund-code">
-                                        持仓: ¥{{ fund.current_amount || 0 }} | 收益率: {{ fund.holding_return_rate || 0 }}%
-                                    </div>
-                                </div>
-                                <input type="number" v-model.number="fund.current_amount" placeholder="金额" style="width: 100px; padding: 4px 8px; border: 1px solid #d9d9d9; border-radius: 4px;" />
-                            </div>
-                        </div>
-                    </a-tab-pane>
-                    <a-tab-pane key="text" tab="文本输入">
-                        <a-textarea v-model:value="syncText" :rows="6" placeholder="每行一个基金，格式：基金代码,持仓金额,上限金额,持有收益率&#10;示例：&#10;000001,10000,50000,5.5&#10;110022,5000,20000,-2.3" ></a-textarea>
-                        <div style="margin-top: 12px; color: #999; font-size: 12px;">
-                            提示：基金代码必填，其他可选。支持逗号或空格分隔。
-                        </div>
-                    </a-tab-pane>
-                    <a-tab-pane key="excel" tab="Excel上传">
-                        <a-space direction="vertical" style="width: 100%;">
-                            <input type="file" ref="excelInput" @change="handleExcelSelect" accept=".xlsx,.xls" style="display: none;" />
-                            <a-button @click="$refs.excelInput?.click()"><a-icon type="upload" ></a-icon>选择Excel文件</a-button>
-                            <a-button type="link" @click="downloadTemplate">📥 下载Excel模板</a-button>
-                        </a-space>
-                    </a-tab-pane>
-                </a-tabs>
+                  <!-- 统计数据 -->
+                  <div class="stat-row">
+                    <div class="stat-item">
+                      <div class="label">最新净值</div>
+                      <div class="value">{{ fund.nav || '--' }}</div>
+                    </div>
+                    <div class="stat-item">
+                      <div class="label">估算净值</div>
+                      <div class="value">{{ fund.estimated_nav || '--' }}</div>
+                    </div>
+                    <div class="stat-item">
+                      <div class="label">估算涨跌</div>
+                      <div
+                        class="value"
+                        :style="{ color: fund.estimated_change >= 0 ? '#f5222d' : '#52c41a' }"
+                      >
+                        {{ fund.estimated_change >= 0 ? '+' : '' }}{{
+                        fund.estimated_change?.toFixed(2) }}%
+                      </div>
+                    </div>
+                    <div class="stat-item">
+                      <div class="label">持有收益率</div>
+                      <div
+                        class="value"
+                        :style="{ color: fund.holding_return_rate >= 0 ? '#f5222d' : '#52c41a' }"
+                      >
+                        {{ fund.holding_return_rate ? (fund.holding_return_rate
+                        >= 0 ? '+' : '') + fund.holding_return_rate.toFixed(2) +
+                        '%' : '--' }}
+                      </div>
+                    </div>
+                  </div>
 
-                <!-- 统一的确认添加按钮 -->
-                <div style="text-align: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid #f0f0f0;">
-                    <a-space size="large">
-                        <a-button @click="syncModalVisible = false">取消</a-button>
-                        <a-button type="primary" @click="confirmSyncFunds" :loading="syncing">
-                            {{ syncTab === 'text' ? '解析并添加' : '确认添加选中基金' }}
-                        </a-button>
-                    </a-space>
+                  <!-- 持仓进度 -->
+                  <div v-if="fund.max_amount > 0" style="margin-top: 12px">
+                    <div
+                      style="
+                        display: flex;
+                        justify-content: space-between;
+                        font-size: 12px;
+                        color: #666;
+                      "
+                    >
+                      <span
+                        >持仓: ¥{{ fund.current_amount?.toLocaleString()
+                        }}</span
+                      >
+                      <span>{{ getPositionPercent(fund) }}%</span>
+                    </div>
+                    <div class="position-bar">
+                      <div
+                        class="position-fill"
+                        :style="{ width: getPositionPercent(fund) + '%' }"
+                      ></div>
+                    </div>
+                  </div>
+
+                  <!-- 操作建议 -->
+                  <div
+                    v-if="fundAdvice[fund.fund_code]"
+                    style="margin-top: 12px"
+                  >
+                    <span
+                      class="advice-tag"
+                      :class="getAdviceClass(fundAdvice[fund.fund_code].advice_type)"
+                    >
+                      {{ fundAdvice[fund.fund_code].advice_type }}
+                    </span>
+                    <span style="font-size: 12px; color: #666; margin-left: 8px"
+                      >{{ fundAdvice[fund.fund_code].reason }}</span
+                    >
+                  </div>
+
+                  <!-- 操作按钮 -->
+                  <div
+                    style="
+                      margin-top: 12px;
+                      display: flex;
+                      justify-content: center;
+                      gap: 12px;
+                    "
+                  >
+                    <a-button
+                      @click="openEditModal(fund)"
+                      style="min-width: 80px"
+                      >编辑</a-button
+                    >
+                    <a-popconfirm
+                      title="确定移除？"
+                      @confirm="removeFund(fund.fund_code)"
+                    >
+                      <a-button danger style="min-width: 80px">移除</a-button>
+                    </a-popconfirm>
+                  </div>
+                </a-card>
+              </a-col>
+            </a-row>
+
+            <!-- 空状态 -->
+            <a-empty
+              v-else
+              description="暂无监控基金，请添加基金"
+              style="margin-top: 100px"
+            ></a-empty>
+          </div>
+        </a-layout>
+
+        <!-- 编辑持仓模态框 -->
+        <a-modal
+          v-model:open="editModalVisible"
+          title="编辑持仓"
+          @ok="savePosition"
+          :confirmLoading="saving"
+        >
+          <a-form layout="vertical">
+            <a-form-item label="基金名称">
+              <a-input :value="editForm.fundName" readonly></a-input>
+            </a-form-item>
+            <a-form-item label="当前持仓金额">
+              <a-input-number
+                v-model:value="editForm.currentAmount"
+                style="width: 100%"
+                :min="0"
+                :precision="2"
+              ></a-input-number>
+            </a-form-item>
+            <a-form-item label="持仓上限金额">
+              <a-input-number
+                v-model:value="editForm.maxAmount"
+                style="width: 100%"
+                :min="0"
+                :precision="2"
+              ></a-input-number>
+            </a-form-item>
+            <a-form-item label="持有收益率(%)">
+              <a-input-number
+                v-model:value="editForm.holdingReturnRate"
+                style="width: 100%"
+                :precision="2"
+              ></a-input-number>
+            </a-form-item>
+          </a-form>
+        </a-modal>
+
+        <!-- 风险提醒全屏预览模态框 -->
+        <a-modal
+          v-model:open="alertModalVisible"
+          title="⚠️ 风险提醒详情"
+          :footer="null"
+          width="800px"
+        >
+          <a-list :dataSource="alerts" itemLayout="horizontal">
+            <template #renderItem="{ item }">
+              <a-list-item>
+                <a-list-item-meta
+                  :title="item.fund_name + ' - ' + item.alert_type"
+                  :description="item.message"
+                >
+                  <template #avatar>
+                    <a-avatar
+                      :style="{ backgroundColor: item.level === 'danger' ? '#f5222d' : '#faad14' }"
+                    >
+                      {{ getAlertIcon(item.alert_type) }}
+                    </a-avatar>
+                  </template>
+                </a-list-item-meta>
+                <template #actions>
+                  <span>{{ item.time }}</span>
+                </template>
+              </a-list-item>
+            </template>
+          </a-list>
+        </a-modal>
+
+        <!-- 当日榜单模态框 -->
+        <a-modal
+          v-model:open="rankModalVisible"
+          title="🏆 当日涨幅榜单"
+          :footer="null"
+          width="800px"
+        >
+          <a-table
+            :data-source="rankList"
+            :pagination="false"
+            row-key="fund_code"
+          >
+            <a-table-column title="排名" key="rank" width="80" align="center">
+              <template #default="{ index }">
+                <span
+                  v-if="index < 3"
+                  style="
+                    display: inline-block;
+                    width: 24px;
+                    height: 24px;
+                    line-height: 24px;
+                    text-align: center;
+                    border-radius: 4px;
+                    color: #fff;
+                  "
+                  :style="{ background: ['gold', 'silver', 'orange'][index] }"
+                  >{{ index + 1 }}</span
+                >
+                <span v-else>{{ index + 1 }}</span>
+              </template>
+            </a-table-column>
+            <a-table-column
+              title="基金名称"
+              data-index="fund_name"
+            ></a-table-column>
+            <a-table-column
+              title="基金代码"
+              data-index="fund_code"
+              width="100"
+            ></a-table-column>
+            <a-table-column
+              title="估算涨跌"
+              key="estimated_change"
+              width="100"
+              align="right"
+              :sorter="(a, b) => (a.estimated_change || 0) - (b.estimated_change || 0)"
+            >
+              <template #default="{ record }">
+                <span
+                  :style="{ color: record.estimated_change >= 0 ? '#f5222d' : '#52c41a', fontWeight: 600 }"
+                >
+                  {{ record.estimated_change >= 0 ? '+' : '' }}{{
+                  record.estimated_change?.toFixed(2) }}%
+                </span>
+              </template>
+            </a-table-column>
+            <a-table-column
+              title="预估收益"
+              key="profit"
+              width="100"
+              align="right"
+              :sorter="(a, b) => (a.current_amount * (a.estimated_change || 0) / 100) - (b.current_amount * (b.estimated_change || 0) / 100)"
+            >
+              <template #default="{ record }">
+                <span
+                  :style="{ color: (record.current_amount * (record.estimated_change || 0) / 100) >= 0 ? '#f5222d' : '#52c41a' }"
+                >
+                  ¥{{ ((record.current_amount * (record.estimated_change || 0) /
+                  100) || 0).toFixed(2) }}
+                </span>
+              </template>
+            </a-table-column>
+          </a-table>
+        </a-modal>
+
+        <!-- 操作建议模态框 -->
+        <a-modal
+          v-model:open="reportModalVisible"
+          title="📋 操作建议"
+          :footer="null"
+          width="700px"
+        >
+          <div v-if="reportLoading" style="text-align: center; padding: 40px">
+            <span>加载中...</span>
+          </div>
+          <div v-else-if="report">
+            <div
+              style="
+                display: flex;
+                flex-wrap: wrap;
+                gap: 16px;
+                margin-bottom: 16px;
+              "
+            >
+              <div
+                v-for="item in reportSummary"
+                :key="item.label"
+                style="text-align: center; min-width: 80px"
+              >
+                <div style="color: #999; font-size: 12px">{{ item.label }}</div>
+                <div style="font-size: 24px; font-weight: 600">
+                  {{ item.value }}
                 </div>
-            </a-modal>
-        </a-config-provider>
+              </div>
+            </div>
+            <hr
+              style="
+                border: none;
+                border-top: 1px solid #f0f0f0;
+                margin: 16px 0;
+              "
+            />
+
+            <div
+              v-for="item in report.advices"
+              :key="item.fund_code"
+              style="
+                display: flex;
+                align-items: center;
+                padding: 12px 0;
+                border-bottom: 1px solid #f0f0f0;
+              "
+            >
+              <div
+                style="
+                  width: 40px;
+                  height: 40px;
+                  border-radius: 50%;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  color: #fff;
+                  margin-right: 12px;
+                "
+                :style="{ background: getAdviceAvatarColor(item.advice_type) }"
+              >
+                {{ item.advice_type?.slice(2, 4) }}
+              </div>
+              <div style="flex: 1">
+                <div style="font-weight: 500">
+                  {{ item.fund_name }} ({{ item.fund_code }})
+                </div>
+                <div style="color: #999; font-size: 12px">
+                  {{ item.reason }}
+                </div>
+              </div>
+              <div style="text-align: right">
+                <span
+                  class="advice-tag"
+                  :class="getAdviceClass(item.advice_type)"
+                  >{{ item.advice_type }}</span
+                >
+                <div
+                  v-if="item.suggested_amount > 0"
+                  style="margin-top: 4px; font-size: 12px"
+                >
+                  ¥{{ item.suggested_amount.toFixed(2) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </a-modal>
+
+        <!-- 基金查询模态框 -->
+        <a-modal
+          v-model:open="queryModalVisible"
+          title="🔍 基金查询"
+          :footer="null"
+          width="900px"
+        >
+          <a-space style="margin-bottom: 16px">
+            <a-input
+              v-model:value="queryFundCode"
+              placeholder="输入基金代码"
+              style="width: 150px"
+              maxlength="6"
+              @pressEnter="queryFund"
+            ></a-input>
+            <a-button type="primary" @click="queryFund" :loading="queryLoading"
+              >查询</a-button
+            >
+          </a-space>
+          <div v-if="queryResult">
+            <a-descriptions :column="3" bordered size="small">
+              <a-descriptions-item label="基金名称" :span="2"
+                >{{ queryResult.fund_name }}</a-descriptions-item
+              >
+              <a-descriptions-item label="基金代码"
+                >{{ queryResult.fund_code }}</a-descriptions-item
+              >
+              <a-descriptions-item label="当前涨跌">
+                <span
+                  :style="{ color: queryResult.estimated_change >= 0 ? '#f5222d' : '#52c41a' }"
+                >
+                  {{ queryResult.estimated_change >= 0 ? '+' : '' }}{{
+                  queryResult.estimated_change?.toFixed(2) }}%
+                </span>
+              </a-descriptions-item>
+              <a-descriptions-item label="近一年涨幅">
+                <span
+                  :style="{ color: (queryResult.returns?.one_year || 0) >= 0 ? '#f5222d' : '#52c41a' }"
+                >
+                  {{ (queryResult.returns?.one_year || 0) >= 0 ? '+' : '' }}{{
+                  (queryResult.returns?.one_year || 0).toFixed(2) }}%
+                </span>
+              </a-descriptions-item>
+              <a-descriptions-item label="基金规模"
+                >{{ queryResult.scale }}</a-descriptions-item
+              >
+              <a-descriptions-item label="所属板块"
+                >{{ queryResult.sector }}</a-descriptions-item
+              >
+              <a-descriptions-item label="基金公司"
+                >{{ queryResult.company }}</a-descriptions-item
+              >
+              <a-descriptions-item label="基金经理"
+                >{{ queryResult.manager }}</a-descriptions-item
+              >
+            </a-descriptions>
+            <a-divider>净值走势</a-divider>
+            <a-radio-group
+              v-model:value="queryPeriod"
+              @change="loadQueryHistory"
+              style="margin-bottom: 16px"
+            >
+              <a-radio-button value="1m">近1月</a-radio-button>
+              <a-radio-button value="3m">近3月</a-radio-button>
+              <a-radio-button value="1y">近1年</a-radio-button>
+              <a-radio-button value="3y">近3年</a-radio-button>
+            </a-radio-group>
+            <div ref="queryChartRef" style="height: 300px"></div>
+            <a-divider>持仓分布</a-divider>
+            <a-row :gutter="16">
+              <a-col :span="12">
+                <div ref="queryPieChartRef" style="height: 250px"></div>
+              </a-col>
+              <a-col :span="12">
+                <a-list
+                  :dataSource="queryHoldings"
+                  size="small"
+                  style="max-height: 250px; overflow-y: auto"
+                >
+                  <template #renderItem="{ item, index }">
+                    <a-list-item>
+                      <span>{{ index + 1 }}. {{ item.name }}</span>
+                      <span style="color: #1890ff"
+                        >{{ item.ratio?.toFixed(2) }}%</span
+                      >
+                    </a-list-item>
+                  </template>
+                </a-list>
+              </a-col>
+            </a-row>
+            <div style="text-align: center; margin-top: 16px">
+              <a-button type="primary" @click="addQueriedFund"
+                >添加到监控</a-button
+              >
+            </div>
+          </div>
+        </a-modal>
+
+        <!-- 同步持仓模态框 -->
+        <a-modal
+          v-model:open="syncModalVisible"
+          title="📥 同步持仓"
+          :footer="null"
+          width="800px"
+          class="sync-modal"
+        >
+          <a-tabs v-model:activeKey="syncTab">
+            <a-tab-pane key="upload" tab="图片识别">
+              <div
+                class="upload-area"
+                @click="triggerUpload"
+                @dragover.prevent="dragOver = true"
+                @dragleave="dragOver = false"
+                @drop.prevent="handleDrop"
+                :class="{ dragging: dragOver }"
+              >
+                <input
+                  type="file"
+                  ref="fileInput"
+                  @change="handleFileSelect"
+                  accept="image/*"
+                  style="display: none"
+                  multiple
+                />
+                <a-icon
+                  type="cloud-upload"
+                  style="font-size: 48px; color: #1890ff"
+                ></a-icon>
+                <p style="margin-top: 16px; color: #666">
+                  点击或拖拽图片到此处
+                </p>
+                <p style="font-size: 12px; color: #999">
+                  支持天天基金、支付宝、券商持仓截图
+                </p>
+              </div>
+
+              <a-progress
+                v-if="ocrProgress > 0 && ocrProgress < 100"
+                :percent="Math.floor(ocrProgress)"
+                status="active"
+                style="margin-bottom: 16px"
+              ></a-progress>
+
+              <!-- 图片识别结果 -->
+              <div
+                v-if="recognizedFunds.length > 0"
+                class="recognized-list"
+                style="margin-top: 16px"
+              >
+                <a-divider
+                  >识别结果 ({{ recognizedFunds.length }}只基金)</a-divider
+                >
+                <div
+                  v-for="(fund, index) in recognizedFunds"
+                  :key="index"
+                  class="recognized-item"
+                >
+                  <input
+                    type="checkbox"
+                    v-model="fund.selected"
+                    style="margin-right: 12px; width: 18px; height: 18px"
+                  />
+                  <div class="fund-info">
+                    <div class="fund-name">
+                      {{ fund.fund_name || '待查询' }} ({{ fund.fund_code ||
+                      '待匹配' }})
+                    </div>
+                    <div class="fund-code">
+                      持仓: ¥{{ fund.current_amount || 0 }} | 收益率: {{
+                      fund.holding_return_rate || 0 }}%
+                    </div>
+                  </div>
+                  <input
+                    type="number"
+                    v-model.number="fund.current_amount"
+                    placeholder="金额"
+                    style="
+                      width: 100px;
+                      padding: 4px 8px;
+                      border: 1px solid #d9d9d9;
+                      border-radius: 4px;
+                    "
+                  />
+                </div>
+              </div>
+            </a-tab-pane>
+            <a-tab-pane key="text" tab="文本输入">
+              <a-textarea
+                v-model:value="syncText"
+                :rows="6"
+                placeholder="每行一个基金，格式：基金代码,持仓金额,上限金额,持有收益率&#10;示例：&#10;000001,10000,50000,5.5&#10;110022,5000,20000,-2.3"
+              ></a-textarea>
+              <div style="margin-top: 12px; color: #999; font-size: 12px">
+                提示：基金代码必填，其他可选。支持逗号或空格分隔。
+              </div>
+            </a-tab-pane>
+            <a-tab-pane key="excel" tab="Excel上传">
+              <a-space direction="vertical" style="width: 100%">
+                <input
+                  type="file"
+                  ref="excelInput"
+                  @change="handleExcelSelect"
+                  accept=".xlsx,.xls"
+                  style="display: none"
+                />
+                <a-button @click="$refs.excelInput?.click()"
+                  ><a-icon type="upload"></a-icon>选择Excel文件</a-button
+                >
+                <a-button type="link" @click="downloadTemplate"
+                  >📥 下载Excel模板</a-button
+                >
+              </a-space>
+            </a-tab-pane>
+          </a-tabs>
+
+          <!-- 统一的确认添加按钮 -->
+          <div
+            style="
+              text-align: center;
+              margin-top: 24px;
+              padding-top: 16px;
+              border-top: 1px solid #f0f0f0;
+            "
+          >
+            <a-space size="large">
+              <a-button @click="syncModalVisible = false">取消</a-button>
+              <a-button
+                type="primary"
+                @click="confirmSyncFunds"
+                :loading="syncing"
+              >
+                {{ syncTab === 'text' ? '解析并添加' : '确认添加选中基金' }}
+              </a-button>
+            </a-space>
+          </div>
+        </a-modal>
+      </a-config-provider>
     </div>
-{% endraw %}
+    {% endraw %}
     <script>
-        const { createApp, ref, reactive, computed, onMounted, watch, nextTick } = Vue;
-        const { message, Modal } = antd;
+      const { createApp, ref, reactive, computed, onMounted, watch, nextTick } =
+        Vue;
+      const { message, Modal } = antd;
 
-        // Tesseract.js 动态加载
-        let Tesseract = null;
-        async function loadTesseract() {
-            if (!Tesseract) {
-                const script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-                document.head.appendChild(script);
-                await new Promise(resolve => script.onload = resolve);
-                Tesseract = window.Tesseract;
-            }
-            return Tesseract;
+      // Tesseract.js 动态加载
+      let Tesseract = null;
+      async function loadTesseract() {
+        if (!Tesseract) {
+          const script = document.createElement("script");
+          script.src =
+            "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+          document.head.appendChild(script);
+          await new Promise((resolve) => (script.onload = resolve));
+          Tesseract = window.Tesseract;
         }
+        return Tesseract;
+      }
 
-        const App = {
-            setup() {
-                // 状态
-                const darkMode = ref(false);
-                const funds = ref([]);
-                const alerts = ref([]);
-                const fundAdvice = ref({});
-                const refreshing = ref(false);
-                const adding = ref(false);
-                const saving = ref(false);
-                const syncModalVisible = ref(false);
-                const editModalVisible = ref(false);
-                const rankModalVisible = ref(false);
-                const reportModalVisible = ref(false);
-                const queryModalVisible = ref(false);
-                const alertModalVisible = ref(false);
-                const cardLayout = ref('4');
-                const currentDatasource = ref('tiantian');
-                const reportLoading = ref(false);
-                const queryLoading = ref(false);
-                const syncing = ref(false);
-                const syncTab = ref('upload');
-                const syncText = ref('');
-                const dragOver = ref(false);
-                const ocrProgress = ref(0);
-                const recognizedFunds = ref([]);
-                const lastUpdate = ref('--');
-                const isTrading = ref(false);
-                const refreshInterval = ref(30);
-                const report = ref(null);
-                const queryFundCode = ref('');
-                const queryResult = ref(null);
-                const queryPeriod = ref('1y');
-                const queryHoldings = ref([]);
-                const fileInput = ref(null);
-                const excelInput = ref(null);
-                const queryChartRef = ref(null);
-                const queryPieChartRef = ref(null);
+      const App = {
+        setup() {
+          // 状态
+          const darkMode = ref(false);
+          const funds = ref([]);
+          const alerts = ref([]);
+          const fundAdvice = ref({});
+          const refreshing = ref(false);
+          const adding = ref(false);
+          const saving = ref(false);
+          const syncModalVisible = ref(false);
+          const editModalVisible = ref(false);
+          const rankModalVisible = ref(false);
+          const reportModalVisible = ref(false);
+          const queryModalVisible = ref(false);
+          const alertModalVisible = ref(false);
+          const cardLayout = ref("4");
+          const currentDatasource = ref("tiantian");
+          const reportLoading = ref(false);
+          const queryLoading = ref(false);
+          const syncing = ref(false);
+          const syncTab = ref("upload");
+          const syncText = ref("");
+          const dragOver = ref(false);
+          const ocrProgress = ref(0);
+          const recognizedFunds = ref([]);
+          const lastUpdate = ref("--");
+          const isTrading = ref(false);
+          const refreshInterval = ref(30);
+          const report = ref(null);
+          const queryFundCode = ref("");
+          const queryResult = ref(null);
+          const queryPeriod = ref("1y");
+          const queryHoldings = ref([]);
+          const fileInput = ref(null);
+          const excelInput = ref(null);
+          const queryChartRef = ref(null);
+          const queryPieChartRef = ref(null);
 
-                // 表单
-                const addForm = reactive({
-                    fundCode: '',
-                    currentAmount: null,
-                    maxAmount: null,
-                    holdingReturnRate: null
-                });
-                const editForm = reactive({
-                    fundCode: '',
-                    fundName: '',
-                    currentAmount: null,
-                    maxAmount: null,
-                    holdingReturnRate: null
-                });
+          // 表单
+          const addForm = reactive({
+            fundCode: "",
+            currentAmount: null,
+            maxAmount: null,
+            holdingReturnRate: null,
+          });
+          const editForm = reactive({
+            fundCode: "",
+            fundName: "",
+            currentAmount: null,
+            maxAmount: null,
+            holdingReturnRate: null,
+          });
 
-                // 计算属性
-                const dailyProfit = computed(() => {
-                    return funds.value
-                        .filter(f => f.current_amount > 0)
-                        .reduce((sum, f) => sum + (f.current_amount * (f.estimated_change || 0) / 100), 0);
-                });
-                const totalPosition = computed(() => {
-                    return funds.value.filter(f => f.current_amount > 0).reduce((sum, f) => sum + (f.current_amount || 0), 0);
-                });
-                const positionCount = computed(() => funds.value.filter(f => f.current_amount > 0).length);
-                const avgChange = computed(() => {
-                    if (funds.value.length === 0) return 0;
-                    return funds.value.reduce((sum, f) => sum + (f.estimated_change || 0), 0) / funds.value.length;
-                });
-                const rankList = computed(() => {
-                    return [...funds.value].sort((a, b) => (b.estimated_change || 0) - (a.estimated_change || 0));
-                });
-                const reportSummary = computed(() => {
-                    if (!report.value) return [];
-                    const s = report.value.summary;
-                    return [
-                        { label: '监控基金', value: s.total_funds },
-                        { label: '建议加仓', value: s.add_position_count },
-                        { label: '建议减仓', value: s.reduce_position_count },
-                        { label: '建议低吸', value: s.batch_buy_count },
-                        { label: '建议止盈', value: s.take_profit_count },
-                        { label: '建议持有', value: s.hold_count }
-                    ];
-                });
+          // 计算属性
+          const dailyProfit = computed(() => {
+            return funds.value
+              .filter((f) => f.current_amount > 0)
+              .reduce(
+                (sum, f) =>
+                  sum + (f.current_amount * (f.estimated_change || 0)) / 100,
+                0,
+              );
+          });
+          const totalPosition = computed(() => {
+            return funds.value
+              .filter((f) => f.current_amount > 0)
+              .reduce((sum, f) => sum + (f.current_amount || 0), 0);
+          });
+          const positionCount = computed(
+            () => funds.value.filter((f) => f.current_amount > 0).length,
+          );
+          const avgChange = computed(() => {
+            if (funds.value.length === 0) return 0;
+            return (
+              funds.value.reduce(
+                (sum, f) => sum + (f.estimated_change || 0),
+                0,
+              ) / funds.value.length
+            );
+          });
+          const rankList = computed(() => {
+            return [...funds.value].sort(
+              (a, b) => (b.estimated_change || 0) - (a.estimated_change || 0),
+            );
+          });
+          const reportSummary = computed(() => {
+            if (!report.value) return [];
+            const s = report.value.summary;
+            return [
+              { label: "监控基金", value: s.total_funds },
+              { label: "建议加仓", value: s.add_position_count },
+              { label: "建议减仓", value: s.reduce_position_count },
+              { label: "建议低吸", value: s.batch_buy_count },
+              { label: "建议止盈", value: s.take_profit_count },
+              { label: "建议持有", value: s.hold_count },
+            ];
+          });
 
-                // 表格列
-                const rankColumns = [
-                    { title: '排名', key: 'rank', width: 60, align: 'center' },
-                    { title: '基金名称', dataIndex: 'fund_name' },
-                    { title: '基金代码', dataIndex: 'fund_code', width: 100 },
-                    { title: '估算涨跌', key: 'estimated_change', width: 100, align: 'right' },
-                    { title: '预估收益', key: 'profit', width: 100, align: 'right' }
-                ];
+          // 表格列
+          const rankColumns = [
+            { title: "排名", key: "rank", width: 60, align: "center" },
+            { title: "基金名称", dataIndex: "fund_name" },
+            { title: "基金代码", dataIndex: "fund_code", width: 100 },
+            {
+              title: "估算涨跌",
+              key: "estimated_change",
+              width: 100,
+              align: "right",
+            },
+            { title: "预估收益", key: "profit", width: 100, align: "right" },
+          ];
 
-                // 方法
-                const showToast = (msg, type = 'success') => {
-                    message[type](msg);
-                };
+          // 方法
+          const showToast = (msg, type = "success") => {
+            message[type](msg);
+          };
 
-                const refreshData = async () => {
-                    refreshing.value = true;
-                    try {
-                        const res = await fetch('/api/funds/refresh', { method: 'POST' });
-                        const data = await res.json();
-                        if (data.success) {
-                            funds.value = data.data || [];
-                            if (isTrading.value) {
-                                alerts.value = data.alerts || [];
-                            }
-                            await loadAdvices();
-                            lastUpdate.value = new Date().toLocaleTimeString('zh-CN');
-                        } else {
-                            showToast(data.message, 'error');
-                        }
-                    } catch (e) {
-                        showToast('刷新失败', 'error');
-                    } finally {
-                        refreshing.value = false;
-                    }
-                };
-
-                const loadAdvices = async () => {
-                    try {
-                        const res = await fetch('/api/advices');
-                        const data = await res.json();
-                        if (data.success && data.data) {
-                            const adviceMap = {};
-                            data.data.forEach(a => { adviceMap[a.fund_code] = a; });
-                            fundAdvice.value = adviceMap;
-                        }
-                    } catch (e) {
-                        console.error('加载建议失败', e);
-                    }
-                };
-
-                const addFund = async () => {
-                    if (!addForm.fundCode) {
-                        showToast('请输入基金代码', 'warning');
-                        return;
-                    }
-                    adding.value = true;
-                    try {
-                        const res = await fetch('/api/funds/add', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                fund_code: addForm.fundCode,
-                                current_amount: addForm.currentAmount || 0,
-                                max_amount: addForm.maxAmount || 0,
-                                holding_return_rate: addForm.holdingReturnRate || 0
-                            })
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                            showToast(data.message || '添加成功');
-                            addForm.fundCode = '';
-                            addForm.currentAmount = null;
-                            addForm.maxAmount = null;
-                            addForm.holdingReturnRate = null;
-                            await refreshData();
-                        } else {
-                            showToast(data.message, 'error');
-                        }
-                    } catch (e) {
-                        showToast('添加失败', 'error');
-                    } finally {
-                        adding.value = false;
-                    }
-                };
-
-                const removeFund = async (fundCode) => {
-                    try {
-                        const res = await fetch(`/api/funds/${fundCode}`, { method: 'DELETE' });
-                        const data = await res.json();
-                        if (data.success) {
-                            showToast('已移除');
-                            await refreshData();
-                        }
-                    } catch (e) {
-                        showToast('移除失败', 'error');
-                    }
-                };
-
-                const clearAllFunds = async () => {
-                    try {
-                        const res = await fetch('/api/funds/clear-all', { method: 'DELETE' });
-                        const data = await res.json();
-                        if (data.success) {
-                            showToast(data.message);
-                            funds.value = [];
-                            alerts.value = [];
-                        }
-                    } catch (e) {
-                        showToast('清除失败', 'error');
-                    }
-                };
-
-                const clearAlerts = async () => {
-                    await fetch('/api/alerts/clear', { method: 'POST' });
-                    alerts.value = [];
-                };
-
-                const loadDatasource = async () => {
-                    try {
-                        const res = await fetch('/api/datasource');
-                        const data = await res.json();
-                        if (data.success && data.data) {
-                            currentDatasource.value = data.data.current;
-                        }
-                    } catch (e) {
-                        console.error('加载数据源失败', e);
-                    }
-                };
-
-                const changeDatasource = async (dsId) => {
-                    try {
-                        const res = await fetch('/api/datasource', {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ source_id: dsId })
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                            showToast(data.message);
-                            await refreshData();
-                        } else {
-                            showToast(data.message, 'error');
-                        }
-                    } catch (e) {
-                        showToast('切换数据源失败', 'error');
-                    }
-                };
-
-                const openEditModal = (fund) => {
-                    editForm.fundCode = fund.fund_code;
-                    editForm.fundName = fund.fund_name;
-                    editForm.currentAmount = fund.current_amount;
-                    editForm.maxAmount = fund.max_amount;
-                    editForm.holdingReturnRate = fund.holding_return_rate;
-                    editModalVisible.value = true;
-                };
-
-                const savePosition = async () => {
-                    saving.value = true;
-                    try {
-                        const res = await fetch(`/api/funds/${editForm.fundCode}/position`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                current_amount: editForm.currentAmount,
-                                max_amount: editForm.maxAmount,
-                                holding_return_rate: editForm.holdingReturnRate
-                            })
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                            showToast('保存成功');
-                            editModalVisible.value = false;
-                            await refreshData();
-                        }
-                    } catch (e) {
-                        showToast('保存失败', 'error');
-                    } finally {
-                        saving.value = false;
-                    }
-                };
-
-                const showRankModal = () => {
-                    if (funds.value.length === 0) {
-                        showToast('暂无监控基金', 'warning');
-                        return;
-                    }
-                    rankModalVisible.value = true;
-                };
-
-                const getReport = async () => {
-                    reportLoading.value = true;
-                    reportModalVisible.value = true;
-                    try {
-                        const res = await fetch('/api/report');
-                        const data = await res.json();
-                        if (data.success) {
-                            report.value = data.data;
-                        }
-                    } catch (e) {
-                        showToast('获取报告失败', 'error');
-                    } finally {
-                        reportLoading.value = false;
-                    }
-                };
-
-                const showQueryModal = () => {
-                    queryFundCode.value = '';
-                    queryResult.value = null;
-                    queryModalVisible.value = true;
-                };
-
-                const showSyncModal = () => {
-                    recognizedFunds.value = [];
-                    syncText.value = '';
-                    ocrProgress.value = 0;
-                    syncModalVisible.value = true;
-                };
-
-                const queryFund = async () => {
-                    if (!queryFundCode.value) return;
-                    queryLoading.value = true;
-                    try {
-                        const res = await fetch(`/api/fund/query/${queryFundCode.value}`);
-                        const data = await res.json();
-                        if (data.success) {
-                            queryResult.value = data.data;
-                            loadQueryHistory();
-                            loadQueryHoldings();
-                        } else {
-                            showToast(data.message, 'error');
-                        }
-                    } catch (e) {
-                        showToast('查询失败', 'error');
-                    } finally {
-                        queryLoading.value = false;
-                    }
-                };
-
-                const loadQueryHistory = async () => {
-                    if (!queryFundCode.value) return;
-                    try {
-                        const res = await fetch(`/api/fund/history/${queryFundCode.value}?period=${queryPeriod.value}`);
-                        const data = await res.json();
-                        if (data.success && data.data) {
-                            await nextTick();
-                            renderQueryChart(data.data);
-                        }
-                    } catch (e) {
-                        console.error('加载历史失败', e);
-                    }
-                };
-
-                const loadQueryHoldings = async () => {
-                    if (!queryFundCode.value) return;
-                    try {
-                        const res = await fetch(`/api/fund/holdings/${queryFundCode.value}`);
-                        const data = await res.json();
-                        if (data.success && data.data) {
-                            queryHoldings.value = data.data.stock_positions || [];
-                            await nextTick();
-                            renderQueryPieChart(data.data);
-                        }
-                    } catch (e) {
-                        console.error('加载持仓失败', e);
-                    }
-                };
-
-                const renderQueryChart = (data) => {
-                    if (!queryChartRef.value) return;
-                    const chart = echarts.init(queryChartRef.value);
-                    chart.setOption({
-                        tooltip: { trigger: 'axis' },
-                        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-                        xAxis: { type: 'category', data: data.dates || [], axisLabel: { fontSize: 10 } },
-                        yAxis: { type: 'value' },
-                        series: [{
-                            type: 'line',
-                            data: data.navs || [],
-                            smooth: true,
-                            lineStyle: { color: '#1890ff' },
-                            areaStyle: { color: 'rgba(24,144,255,0.1)' }
-                        }]
-                    });
-                };
-
-                const renderQueryPieChart = (data) => {
-                    if (!queryPieChartRef.value) return;
-                    const chart = echarts.init(queryPieChartRef.value);
-                    const allocation = data.asset_allocation || [];
-                    chart.setOption({
-                        tooltip: { trigger: 'item', formatter: '{b}: {d}%' },
-                        series: [{
-                            type: 'pie',
-                            radius: ['40%', '70%'],
-                            data: allocation.map(a => ({ name: a.name, value: a.ratio }))
-                        }]
-                    });
-                };
-
-                const addQueriedFund = async () => {
-                    if (!queryFundCode.value) return;
-                    try {
-                        const res = await fetch('/api/funds/add', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ fund_code: queryFundCode.value })
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                            showToast('已添加到监控');
-                            queryModalVisible.value = false;
-                            await refreshData();
-                        }
-                    } catch (e) {
-                        showToast('添加失败', 'error');
-                    }
-                };
-
-                const triggerUpload = () => {
-                    fileInput.value?.click();
-                };
-
-                const handleFileSelect = (e) => {
-                    const files = e.target.files;
-                    console.log('上传文件', {
-                        files,
-                        e
-                    })
-                    if (files.length > 0) {
-                        processImages(files);
-                    }
-                };
-
-                const handleDrop = (e) => {
-                    dragOver.value = false;
-                    const files = e.dataTransfer.files;
-                    if (files.length > 0) {
-                        processImages(files);
-                    }
-                };
-
-                const processImages = async (files) => {
-                    ocrProgress.value = 10;
-                    const allFunds = [];
-
-                    for (let i = 0; i < files.length; i++) {
-                        const file = files[i];
-                        if (!file.type.startsWith('image/')) continue;
-
-                        ocrProgress.value = 10 + (i / files.length) * 20;
-
-                        try {
-                            // 首先尝试后端OCR识别
-                            const formData = new FormData();
-                            formData.append('file', file);
-
-                            const backendRes = await fetch('/api/ocr/recognize', {
-                                method: 'POST',
-                                body: formData
-                            });
-                            const backendData = await backendRes.json();
-
-                            if (backendData.success && backendData.funds && backendData.funds.length > 0) {
-                                // 后端OCR成功
-                                backendData.funds.forEach(f => {
-                                    f.selected = true;
-                                    allFunds.push(f);
-                                });
-                                ocrProgress.value = 100;
-                            } else {
-                                // 后端OCR失败，使用前端Tesseract.js
-                                console.log('后端OCR不可用，使用前端Tesseract.js');
-                                ocrProgress.value = 30;
-
-                                const tesseractLib = await loadTesseract();
-                                console.log('Tesseract loaded:', !!tesseractLib);
-
-                                const result = await tesseractLib.recognize(file, 'chi_sim+eng', {
-                                    logger: m => {
-                                        console.log('Tesseract status:', m.status, m.progress);
-                                        if (m.status === 'recognizing text') {
-                                            ocrProgress.value = 30 + m.progress * 60;
-                                        }
-                                    }
-                                });
-
-                                console.log('Tesseract result text:', result.data.text);
-
-                                // 调用后端解析文本
-                                const parseRes = await fetch('/api/ocr/parse', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ text: result.data.text })
-                                });
-                                const parseData = await parseRes.json();
-                                console.log('Parse result:', parseData);
-
-                                if (parseData.success && parseData.funds && parseData.funds.length > 0) {
-                                    parseData.funds.forEach(f => {
-                                        f.selected = true;
-                                        allFunds.push(f);
-                                    });
-                                    console.log('All funds after parse:', allFunds.length);
-                                }
-                            }
-                        } catch (e) {
-                            console.error('OCR识别失败', e);
-                            // 尝试纯前端Tesseract识别
-                            try {
-                                ocrProgress.value = 50;
-                                const tesseractLib = await loadTesseract();
-                                const result = await tesseractLib.recognize(file, 'chi_sim+eng', {
-                                    logger: m => {
-                                        if (m.status === 'recognizing text') {
-                                            ocrProgress.value = 50 + m.progress * 45;
-                                        }
-                                    }
-                                });
-
-                                const parseRes = await fetch('/api/ocr/parse', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ text: result.data.text })
-                                });
-                                const parseData = await parseRes.json();
-
-                                if (parseData.success && parseData.funds) {
-                                    parseData.funds.forEach(f => {
-                                        f.selected = true;
-                                        allFunds.push(f);
-                                    });
-                                }
-                            } catch (e2) {
-                                console.error('前端Tesseract也失败', e2);
-                            }
-                        }
-                    }
-
-                    ocrProgress.value = 100;
-
-                    // 对于没有基金代码的，尝试通过名称搜索
-                    for (const fund of allFunds) {
-                        if (!fund.fund_code && fund.fund_name) {
-                            try {
-                                const searchRes = await fetch(`/api/fund/search?keyword=${encodeURIComponent(fund.fund_name)}`);
-                                const searchData = await searchRes.json();
-                                if (searchData.success && searchData.data && searchData.data.length > 0) {
-                                    // 取第一个匹配结果
-                                    fund.fund_code = searchData.data[0].fund_code;
-                                    fund.fund_name = searchData.data[0].fund_name;
-                                }
-                            } catch (e) {
-                                console.error('搜索基金失败', e);
-                            }
-                        }
-                    }
-
-                    recognizedFunds.value = allFunds;
-
-                    console.log('打印代码', recognizedFunds.value)
-
-                    if (allFunds.length === 0) {
-                        showToast('未识别到基金信息，请尝试其他图片或手动输入', 'warning');
-                    }
-                };
-
-                const handleExcelUpload = async (file) => {
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    syncing.value = true;
-                    try {
-                        const res = await fetch('/api/funds/upload', { method: 'POST', body: formData });
-                        const data = await res.json();
-                        if (data.success) {
-                            showToast(data.message);
-                            syncModalVisible.value = false;
-                            await refreshData();
-                        } else {
-                            showToast(data.message, 'error');
-                        }
-                    } catch (e) {
-                        console.error('上传失败', e);
-                        showToast('上传失败', 'error');
-                    } finally {
-                        syncing.value = false;
-                    }
-                };
-
-                const handleExcelSelect = (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        handleExcelUpload(file);
-                        e.target.value = ''; // 重置以便重复选择同一文件
-                    }
-                };
-
-                const downloadTemplate = () => {
-                    window.location.href = '/api/funds/template';
-                };
-
-                const confirmSyncFunds = async () => {
-                    // 处理文本输入
-                    if (syncTab.value === 'text' && syncText.value.trim()) {
-                        syncing.value = true;
-                        try {
-                            const lines = syncText.value.trim().split('\n');
-                            const funds = [];
-                            for (const line of lines) {
-                                const parts = line.split(/[,\s]+/).filter(p => p.trim());
-                                if (parts.length >= 1) {
-                                    const fundCode = parts[0].trim();
-                                    if (fundCode && /^\d{6}$/.test(fundCode)) {
-                                        funds.push({
-                                            fund_code: fundCode,
-                                            current_amount: parseFloat(parts[1]) || 0,
-                                            max_amount: parseFloat(parts[2]) || 0,
-                                            holding_return_rate: parseFloat(parts[3]) || 0,
-                                            selected: true
-                                        });
-                                    }
-                                }
-                            }
-                            if (funds.length === 0) {
-                                showToast('未识别到有效的基金代码，请检查格式', 'warning');
-                                syncing.value = false;
-                                return;
-                            }
-                            const res = await fetch('/api/funds/batch', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ funds })
-                            });
-                            const data = await res.json();
-                            if (data.success) {
-                                showToast(data.message);
-                                syncModalVisible.value = false;
-                                syncText.value = '';
-                                await refreshData();
-                            } else {
-                                showToast(data.message, 'error');
-                            }
-                        } catch (e) {
-                            showToast('添加失败', 'error');
-                        } finally {
-                            syncing.value = false;
-                        }
-                        return;
-                    }
-
-                    // 处理图片识别结果
-                    const selected = recognizedFunds.value.filter(f => f.selected);
-                    if (selected.length === 0) {
-                        showToast('请选择要添加的基金', 'warning');
-                        return;
-                    }
-
-                    syncing.value = true;
-                    try {
-                        const res = await fetch('/api/funds/batch', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ funds: selected })
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                            showToast(data.message);
-                            syncModalVisible.value = false;
-                            recognizedFunds.value = [];
-                            await refreshData();
-                        }
-                    } catch (e) {
-                        showToast('添加失败', 'error');
-                    } finally {
-                        syncing.value = false;
-                    }
-                };
-
-                // 辅助方法
-                const getRiskColor = (level) => {
-                    return { low: 'green', medium: 'orange', high: 'red' }[level] || 'orange';
-                };
-
-                const getAlertIcon = (type) => {
-                    const icons = {
-                        '涨跌幅提醒': '📈',
-                        '估值偏差提醒': '📊',
-                        '持仓股票异动': '⚠️',
-                        '最大回撤提醒': '🔻'
-                    };
-                    return icons[type] || '⚠️';
-                };
-
-                const calculateProfit = (fund) => {
-                    return (fund.current_amount || 0) * ((fund.estimated_change || 0) / 100);
-                };
-
-                const formatMoney = (v) => v >= 0 ? '+' + Math.abs(v).toFixed(2) : v.toFixed(2);
-
-                const getPositionPercent = (fund) => {
-                    if (!fund.max_amount) return 0;
-                    return Math.min(100, ((fund.current_amount || 0) / fund.max_amount * 100)).toFixed(1);
-                };
-
-                const getAdviceClass = (type) => {
-                    const map = {
-                        '建议加仓': 'add', '建议减仓': 'reduce',
-                        '建议持有观望': 'hold', '建议分批低吸': 'buy', '建议止盈部分仓位': 'reduce'
-                    };
-                    return map[type] || 'hold';
-                };
-
-                const getAdviceAvatarColor = (type) => {
-                    const map = {
-                        '建议加仓': '#52c41a', '建议减仓': '#f5222d',
-                        '建议持有观望': '#faad14', '建议分批低吸': '#1890ff', '建议止盈部分仓位': '#faad14'
-                    };
-                    return map[type] || '#999';
-                };
-
-                const toggleTheme = () => {
-                    document.body.classList.toggle('dark-theme', darkMode.value);
-                };
-
-                const checkTradingTime = () => {
-                    const now = new Date();
-                    const t = now.getHours() * 100 + now.getMinutes();
-                    isTrading.value = t >= 905 && t <= 1500;
-                };
-
-                // 生命周期
-                onMounted(() => {
-                    refreshData();
-                    loadDatasource();
-                    checkTradingTime();
-                    setInterval(checkTradingTime, 60000);
-                    setInterval(() => {
-                        if (isTrading.value) refreshData();
-                    }, refreshInterval.value * 1000);
-                });
-
-                return {
-                    // 状态
-                    darkMode, funds, alerts, fundAdvice, refreshing, adding, saving,
-                    syncModalVisible, editModalVisible, rankModalVisible, reportModalVisible, queryModalVisible, alertModalVisible,
-                    reportLoading, queryLoading, syncing, syncTab, syncText, dragOver, ocrProgress,
-                    recognizedFunds, lastUpdate, isTrading, refreshInterval, report, queryFundCode,
-                    queryResult, queryPeriod, queryHoldings, fileInput, excelInput, queryChartRef, queryPieChartRef,
-                    cardLayout, currentDatasource,
-                    // 表单
-                    addForm, editForm,
-                    // 计算属性
-                    dailyProfit, totalPosition, positionCount, avgChange, rankList, reportSummary,
-                    // 表格
-                    rankColumns,
-                    // 方法
-                    showToast, refreshData, addFund, removeFund, clearAllFunds, clearAlerts, changeDatasource,
-                    openEditModal, savePosition, showRankModal, getReport, showQueryModal, showSyncModal,
-                    queryFund, loadQueryHistory, addQueriedFund, triggerUpload, handleFileSelect, handleDrop,
-                    handleExcelUpload, handleExcelSelect, downloadTemplate, confirmSyncFunds,
-                    getRiskColor, getAlertIcon, calculateProfit, formatMoney, getPositionPercent,
-                    getAdviceClass, getAdviceAvatarColor, toggleTheme
-                };
+          const refreshData = async () => {
+            refreshing.value = true;
+            try {
+              const res = await fetch("/api/funds/refresh", { method: "POST" });
+              const data = await res.json();
+              if (data.success) {
+                funds.value = data.data || [];
+                if (isTrading.value) {
+                  alerts.value = data.alerts || [];
+                }
+                await loadAdvices();
+                lastUpdate.value = new Date().toLocaleTimeString("zh-CN");
+              } else {
+                showToast(data.message, "error");
+              }
+            } catch (e) {
+              showToast("刷新失败", "error");
+            } finally {
+              refreshing.value = false;
             }
-        };
+          };
 
-        const app = createApp(App);
-        app.use(antd);
-        app.mount('#app');
+          const loadAdvices = async () => {
+            try {
+              const res = await fetch("/api/advices");
+              const data = await res.json();
+              if (data.success && data.data) {
+                const adviceMap = {};
+                data.data.forEach((a) => {
+                  adviceMap[a.fund_code] = a;
+                });
+                fundAdvice.value = adviceMap;
+              }
+            } catch (e) {
+              console.error("加载建议失败", e);
+            }
+          };
+
+          const addFund = async () => {
+            if (!addForm.fundCode) {
+              showToast("请输入基金代码", "warning");
+              return;
+            }
+            adding.value = true;
+            try {
+              const res = await fetch("/api/funds/add", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  fund_code: addForm.fundCode,
+                  current_amount: addForm.currentAmount || 0,
+                  max_amount: addForm.maxAmount || 0,
+                  holding_return_rate: addForm.holdingReturnRate || 0,
+                }),
+              });
+              const data = await res.json();
+              if (data.success) {
+                showToast(data.message || "添加成功");
+                addForm.fundCode = "";
+                addForm.currentAmount = null;
+                addForm.maxAmount = null;
+                addForm.holdingReturnRate = null;
+                await refreshData();
+              } else {
+                showToast(data.message, "error");
+              }
+            } catch (e) {
+              showToast("添加失败", "error");
+            } finally {
+              adding.value = false;
+            }
+          };
+
+          const removeFund = async (fundCode) => {
+            try {
+              const res = await fetch(`/api/funds/${fundCode}`, {
+                method: "DELETE",
+              });
+              const data = await res.json();
+              if (data.success) {
+                showToast("已移除");
+                await refreshData();
+              }
+            } catch (e) {
+              showToast("移除失败", "error");
+            }
+          };
+
+          const clearAllFunds = async () => {
+            try {
+              const res = await fetch("/api/funds/clear-all", {
+                method: "DELETE",
+              });
+              const data = await res.json();
+              if (data.success) {
+                showToast(data.message);
+                funds.value = [];
+                alerts.value = [];
+              }
+            } catch (e) {
+              showToast("清除失败", "error");
+            }
+          };
+
+          const clearAlerts = async () => {
+            await fetch("/api/alerts/clear", { method: "POST" });
+            alerts.value = [];
+          };
+
+          const loadDatasource = async () => {
+            try {
+              const res = await fetch("/api/datasource");
+              const data = await res.json();
+              if (data.success && data.data) {
+                currentDatasource.value = data.data.current;
+              }
+            } catch (e) {
+              console.error("加载数据源失败", e);
+            }
+          };
+
+          const changeDatasource = async (dsId) => {
+            try {
+              const res = await fetch("/api/datasource", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ source_id: dsId }),
+              });
+              const data = await res.json();
+              if (data.success) {
+                showToast(data.message);
+                await refreshData();
+              } else {
+                showToast(data.message, "error");
+              }
+            } catch (e) {
+              showToast("切换数据源失败", "error");
+            }
+          };
+
+          const openEditModal = (fund) => {
+            editForm.fundCode = fund.fund_code;
+            editForm.fundName = fund.fund_name;
+            editForm.currentAmount = fund.current_amount;
+            editForm.maxAmount = fund.max_amount;
+            editForm.holdingReturnRate = fund.holding_return_rate;
+            editModalVisible.value = true;
+          };
+
+          const savePosition = async () => {
+            saving.value = true;
+            try {
+              const res = await fetch(
+                `/api/funds/${editForm.fundCode}/position`,
+                {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    current_amount: editForm.currentAmount,
+                    max_amount: editForm.maxAmount,
+                    holding_return_rate: editForm.holdingReturnRate,
+                  }),
+                },
+              );
+              const data = await res.json();
+              if (data.success) {
+                showToast("保存成功");
+                editModalVisible.value = false;
+                await refreshData();
+              }
+            } catch (e) {
+              showToast("保存失败", "error");
+            } finally {
+              saving.value = false;
+            }
+          };
+
+          const showRankModal = () => {
+            if (funds.value.length === 0) {
+              showToast("暂无监控基金", "warning");
+              return;
+            }
+            rankModalVisible.value = true;
+          };
+
+          const getReport = async () => {
+            reportLoading.value = true;
+            reportModalVisible.value = true;
+            try {
+              const res = await fetch("/api/report");
+              const data = await res.json();
+              if (data.success) {
+                report.value = data.data;
+              }
+            } catch (e) {
+              showToast("获取报告失败", "error");
+            } finally {
+              reportLoading.value = false;
+            }
+          };
+
+          const showQueryModal = () => {
+            queryFundCode.value = "";
+            queryResult.value = null;
+            queryModalVisible.value = true;
+          };
+
+          const showSyncModal = () => {
+            recognizedFunds.value = [];
+            syncText.value = "";
+            ocrProgress.value = 0;
+            syncModalVisible.value = true;
+          };
+
+          const queryFund = async () => {
+            if (!queryFundCode.value) return;
+            queryLoading.value = true;
+            try {
+              const res = await fetch(`/api/fund/query/${queryFundCode.value}`);
+              const data = await res.json();
+              if (data.success) {
+                queryResult.value = data.data;
+                loadQueryHistory();
+                loadQueryHoldings();
+              } else {
+                showToast(data.message, "error");
+              }
+            } catch (e) {
+              showToast("查询失败", "error");
+            } finally {
+              queryLoading.value = false;
+            }
+          };
+
+          const loadQueryHistory = async () => {
+            if (!queryFundCode.value) return;
+            try {
+              const res = await fetch(
+                `/api/fund/history/${queryFundCode.value}?period=${queryPeriod.value}`,
+              );
+              const data = await res.json();
+              if (data.success && data.data) {
+                await nextTick();
+                renderQueryChart(data.data);
+              }
+            } catch (e) {
+              console.error("加载历史失败", e);
+            }
+          };
+
+          const loadQueryHoldings = async () => {
+            if (!queryFundCode.value) return;
+            try {
+              const res = await fetch(
+                `/api/fund/holdings/${queryFundCode.value}`,
+              );
+              const data = await res.json();
+              if (data.success && data.data) {
+                queryHoldings.value = data.data.stock_positions || [];
+                await nextTick();
+                renderQueryPieChart(data.data);
+              }
+            } catch (e) {
+              console.error("加载持仓失败", e);
+            }
+          };
+
+          const renderQueryChart = (data) => {
+            if (!queryChartRef.value) return;
+            const chart = echarts.init(queryChartRef.value);
+            chart.setOption({
+              tooltip: { trigger: "axis" },
+              grid: {
+                left: "3%",
+                right: "4%",
+                bottom: "3%",
+                containLabel: true,
+              },
+              xAxis: {
+                type: "category",
+                data: data.dates || [],
+                axisLabel: { fontSize: 10 },
+              },
+              yAxis: { type: "value" },
+              series: [
+                {
+                  type: "line",
+                  data: data.navs || [],
+                  smooth: true,
+                  lineStyle: { color: "#1890ff" },
+                  areaStyle: { color: "rgba(24,144,255,0.1)" },
+                },
+              ],
+            });
+          };
+
+          const renderQueryPieChart = (data) => {
+            if (!queryPieChartRef.value) return;
+            const chart = echarts.init(queryPieChartRef.value);
+            const allocation = data.asset_allocation || [];
+            chart.setOption({
+              tooltip: { trigger: "item", formatter: "{b}: {d}%" },
+              series: [
+                {
+                  type: "pie",
+                  radius: ["40%", "70%"],
+                  data: allocation.map((a) => ({
+                    name: a.name,
+                    value: a.ratio,
+                  })),
+                },
+              ],
+            });
+          };
+
+          const addQueriedFund = async () => {
+            if (!queryFundCode.value) return;
+            try {
+              const res = await fetch("/api/funds/add", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ fund_code: queryFundCode.value }),
+              });
+              const data = await res.json();
+              if (data.success) {
+                showToast("已添加到监控");
+                queryModalVisible.value = false;
+                await refreshData();
+              }
+            } catch (e) {
+              showToast("添加失败", "error");
+            }
+          };
+
+          const triggerUpload = () => {
+            fileInput.value?.click();
+          };
+
+          const handleFileSelect = (e) => {
+            const files = e.target.files;
+            console.log("上传文件", {
+              files,
+              e,
+            });
+            if (files.length > 0) {
+              processImages(files);
+            }
+          };
+
+          const handleDrop = (e) => {
+            dragOver.value = false;
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+              processImages(files);
+            }
+          };
+
+          const processImages = async (files) => {
+            ocrProgress.value = 10;
+            const allFunds = [];
+
+            for (let i = 0; i < files.length; i++) {
+              const file = files[i];
+              if (!file.type.startsWith("image/")) continue;
+
+              ocrProgress.value = 10 + (i / files.length) * 20;
+
+              try {
+                // 首先尝试后端OCR识别
+                const formData = new FormData();
+                formData.append("file", file);
+
+                const backendRes = await fetch("/api/ocr/recognize", {
+                  method: "POST",
+                  body: formData,
+                });
+                const backendData = await backendRes.json();
+
+                if (
+                  backendData.success &&
+                  backendData.funds &&
+                  backendData.funds.length > 0
+                ) {
+                  // 后端OCR成功
+                  backendData.funds.forEach((f) => {
+                    f.selected = true;
+                    allFunds.push(f);
+                  });
+                  ocrProgress.value = 100;
+                } else {
+                  // 后端OCR失败，使用前端Tesseract.js
+                  console.log("后端OCR不可用，使用前端Tesseract.js");
+                  ocrProgress.value = 30;
+
+                  const tesseractLib = await loadTesseract();
+                  console.log("Tesseract loaded:", !!tesseractLib);
+
+                  const result = await tesseractLib.recognize(
+                    file,
+                    "chi_sim+eng",
+                    {
+                      logger: (m) => {
+                        console.log("Tesseract status:", m.status, m.progress);
+                        if (m.status === "recognizing text") {
+                          ocrProgress.value = 30 + m.progress * 60;
+                        }
+                      },
+                    },
+                  );
+
+                  console.log("Tesseract result text:", result.data.text);
+
+                  // 调用后端解析文本
+                  const parseRes = await fetch("/api/ocr/parse", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: result.data.text }),
+                  });
+                  const parseData = await parseRes.json();
+                  console.log("Parse result:", parseData);
+
+                  if (
+                    parseData.success &&
+                    parseData.funds &&
+                    parseData.funds.length > 0
+                  ) {
+                    parseData.funds.forEach((f) => {
+                      f.selected = true;
+                      allFunds.push(f);
+                    });
+                    console.log("All funds after parse:", allFunds.length);
+                  }
+                }
+              } catch (e) {
+                console.error("OCR识别失败", e);
+                // 尝试纯前端Tesseract识别
+                try {
+                  ocrProgress.value = 50;
+                  const tesseractLib = await loadTesseract();
+                  const result = await tesseractLib.recognize(
+                    file,
+                    "chi_sim+eng",
+                    {
+                      logger: (m) => {
+                        if (m.status === "recognizing text") {
+                          ocrProgress.value = 50 + m.progress * 45;
+                        }
+                      },
+                    },
+                  );
+
+                  const parseRes = await fetch("/api/ocr/parse", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: result.data.text }),
+                  });
+                  const parseData = await parseRes.json();
+
+                  if (parseData.success && parseData.funds) {
+                    parseData.funds.forEach((f) => {
+                      f.selected = true;
+                      allFunds.push(f);
+                    });
+                  }
+                } catch (e2) {
+                  console.error("前端Tesseract也失败", e2);
+                }
+              }
+            }
+
+            ocrProgress.value = 100;
+
+            // 对于没有基金代码的，尝试通过名称搜索
+            for (const fund of allFunds) {
+              if (!fund.fund_code && fund.fund_name) {
+                try {
+                  const searchRes = await fetch(
+                    `/api/fund/search?keyword=${encodeURIComponent(fund.fund_name)}`,
+                  );
+                  const searchData = await searchRes.json();
+                  if (
+                    searchData.success &&
+                    searchData.data &&
+                    searchData.data.length > 0
+                  ) {
+                    // 取第一个匹配结果
+                    fund.fund_code = searchData.data[0].fund_code;
+                    fund.fund_name = searchData.data[0].fund_name;
+                  }
+                } catch (e) {
+                  console.error("搜索基金失败", e);
+                }
+              }
+            }
+
+            recognizedFunds.value = allFunds;
+
+            console.log("打印代码", recognizedFunds.value);
+
+            if (allFunds.length === 0) {
+              showToast(
+                "未识别到基金信息，请尝试其他图片或手动输入",
+                "warning",
+              );
+            }
+          };
+
+          const handleExcelUpload = async (file) => {
+            const formData = new FormData();
+            formData.append("file", file);
+            syncing.value = true;
+            try {
+              const res = await fetch("/api/funds/upload", {
+                method: "POST",
+                body: formData,
+              });
+              const data = await res.json();
+              if (data.success) {
+                showToast(data.message);
+                syncModalVisible.value = false;
+                await refreshData();
+              } else {
+                showToast(data.message, "error");
+              }
+            } catch (e) {
+              console.error("上传失败", e);
+              showToast("上传失败", "error");
+            } finally {
+              syncing.value = false;
+            }
+          };
+
+          const handleExcelSelect = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+              handleExcelUpload(file);
+              e.target.value = ""; // 重置以便重复选择同一文件
+            }
+          };
+
+          const downloadTemplate = () => {
+            window.location.href = "/api/funds/template";
+          };
+
+          const confirmSyncFunds = async () => {
+            // 处理文本输入
+            if (syncTab.value === "text" && syncText.value.trim()) {
+              syncing.value = true;
+              try {
+                const lines = syncText.value.trim().split("\n");
+                const funds = [];
+                for (const line of lines) {
+                  const parts = line.split(/[,\s]+/).filter((p) => p.trim());
+                  if (parts.length >= 1) {
+                    const fundCode = parts[0].trim();
+                    if (fundCode && /^\d{6}$/.test(fundCode)) {
+                      funds.push({
+                        fund_code: fundCode,
+                        current_amount: parseFloat(parts[1]) || 0,
+                        max_amount: parseFloat(parts[2]) || 0,
+                        holding_return_rate: parseFloat(parts[3]) || 0,
+                        selected: true,
+                      });
+                    }
+                  }
+                }
+                if (funds.length === 0) {
+                  showToast("未识别到有效的基金代码，请检查格式", "warning");
+                  syncing.value = false;
+                  return;
+                }
+                const res = await fetch("/api/funds/batch", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ funds }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                  showToast(data.message);
+                  syncModalVisible.value = false;
+                  syncText.value = "";
+                  await refreshData();
+                } else {
+                  showToast(data.message, "error");
+                }
+              } catch (e) {
+                showToast("添加失败", "error");
+              } finally {
+                syncing.value = false;
+              }
+              return;
+            }
+
+            // 处理图片识别结果
+            const selected = recognizedFunds.value.filter((f) => f.selected);
+            if (selected.length === 0) {
+              showToast("请选择要添加的基金", "warning");
+              return;
+            }
+
+            syncing.value = true;
+            try {
+              const res = await fetch("/api/funds/batch", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ funds: selected }),
+              });
+              const data = await res.json();
+              if (data.success) {
+                showToast(data.message);
+                syncModalVisible.value = false;
+                recognizedFunds.value = [];
+                await refreshData();
+              }
+            } catch (e) {
+              showToast("添加失败", "error");
+            } finally {
+              syncing.value = false;
+            }
+          };
+
+          // 辅助方法
+          const getRiskColor = (level) => {
+            return (
+              { low: "green", medium: "orange", high: "red" }[level] || "orange"
+            );
+          };
+
+          const getAlertIcon = (type) => {
+            const icons = {
+              涨跌幅提醒: "📈",
+              估值偏差提醒: "📊",
+              持仓股票异动: "⚠️",
+              最大回撤提醒: "🔻",
+            };
+            return icons[type] || "⚠️";
+          };
+
+          const calculateProfit = (fund) => {
+            return (
+              (fund.current_amount || 0) * ((fund.estimated_change || 0) / 100)
+            );
+          };
+
+          const formatMoney = (v) =>
+            v >= 0 ? "+" + Math.abs(v).toFixed(2) : v.toFixed(2);
+
+          const getPositionPercent = (fund) => {
+            if (!fund.max_amount) return 0;
+            return Math.min(
+              100,
+              ((fund.current_amount || 0) / fund.max_amount) * 100,
+            ).toFixed(1);
+          };
+
+          const getAdviceClass = (type) => {
+            const map = {
+              建议加仓: "add",
+              建议减仓: "reduce",
+              建议持有观望: "hold",
+              建议分批低吸: "buy",
+              建议止盈部分仓位: "reduce",
+            };
+            return map[type] || "hold";
+          };
+
+          const getAdviceAvatarColor = (type) => {
+            const map = {
+              建议加仓: "#52c41a",
+              建议减仓: "#f5222d",
+              建议持有观望: "#faad14",
+              建议分批低吸: "#1890ff",
+              建议止盈部分仓位: "#faad14",
+            };
+            return map[type] || "#999";
+          };
+
+          const toggleTheme = () => {
+            document.body.classList.toggle("dark-theme", darkMode.value);
+          };
+
+          const checkTradingTime = () => {
+            const now = new Date();
+            const t = now.getHours() * 100 + now.getMinutes();
+            isTrading.value = t >= 905 && t <= 1500;
+          };
+
+          // 生命周期
+          onMounted(() => {
+            refreshData();
+            loadDatasource();
+            checkTradingTime();
+            setInterval(checkTradingTime, 60000);
+            setInterval(() => {
+              if (isTrading.value) refreshData();
+            }, refreshInterval.value * 1000);
+          });
+
+          return {
+            // 状态
+            darkMode,
+            funds,
+            alerts,
+            fundAdvice,
+            refreshing,
+            adding,
+            saving,
+            syncModalVisible,
+            editModalVisible,
+            rankModalVisible,
+            reportModalVisible,
+            queryModalVisible,
+            alertModalVisible,
+            reportLoading,
+            queryLoading,
+            syncing,
+            syncTab,
+            syncText,
+            dragOver,
+            ocrProgress,
+            recognizedFunds,
+            lastUpdate,
+            isTrading,
+            refreshInterval,
+            report,
+            queryFundCode,
+            queryResult,
+            queryPeriod,
+            queryHoldings,
+            fileInput,
+            excelInput,
+            queryChartRef,
+            queryPieChartRef,
+            cardLayout,
+            currentDatasource,
+            // 表单
+            addForm,
+            editForm,
+            // 计算属性
+            dailyProfit,
+            totalPosition,
+            positionCount,
+            avgChange,
+            rankList,
+            reportSummary,
+            // 表格
+            rankColumns,
+            // 方法
+            showToast,
+            refreshData,
+            addFund,
+            removeFund,
+            clearAllFunds,
+            clearAlerts,
+            changeDatasource,
+            openEditModal,
+            savePosition,
+            showRankModal,
+            getReport,
+            showQueryModal,
+            showSyncModal,
+            queryFund,
+            loadQueryHistory,
+            addQueriedFund,
+            triggerUpload,
+            handleFileSelect,
+            handleDrop,
+            handleExcelUpload,
+            handleExcelSelect,
+            downloadTemplate,
+            confirmSyncFunds,
+            getRiskColor,
+            getAlertIcon,
+            calculateProfit,
+            formatMoney,
+            getPositionPercent,
+            getAdviceClass,
+            getAdviceAvatarColor,
+            toggleTheme,
+          };
+        },
+      };
+
+      const app = createApp(App);
+      app.use(antd);
+      app.mount("#app");
     </script>
-</body>
+  </body>
 </html>
