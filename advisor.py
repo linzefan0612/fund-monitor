@@ -247,41 +247,79 @@ class FundAdvisor:
         if holding_return_rate is None:
             holding_return_rate = 0
 
-        # 1. 单日大跌 >= 3% → 建议分批低吸
+        # 1. 单日大跌 >= 3% → 综合持有收益率评估
         if estimated_change <= BATCH_BUY_THRESHOLD:
-            # 如果持有收益为正，分批低吸更安全
-            if holding_return_rate > 0:
-                return (
-                    AdviceType.BATCH_BUY,
-                    f"今日估算下跌 {abs(estimated_change):.2f}%，持有收益率 {holding_return_rate:.2f}% 为正，适合分批低吸降低成本",
-                    0.85
-                )
-            return (
-                AdviceType.BATCH_BUY,
-                f"今日估算下跌 {abs(estimated_change):.2f}%，超过 {abs(BATCH_BUY_THRESHOLD)}% 阈值，适合分批低吸",
-                0.8
-            )
-
-        # 2. 单日大涨 >= 4% → 建议止盈部分仓位
-        if estimated_change >= TAKE_PROFIT_THRESHOLD:
-            # 如果持有收益较高，止盈更有意义
+            # 持有收益为正：下跌是低成本加仓好时机
             if holding_return_rate > 10:
                 return (
-                    AdviceType.TAKE_PROFIT,
-                    f"今日估算上涨 {estimated_change:.2f}%，持有收益率已达 {holding_return_rate:.2f}%，强烈建议止盈锁定收益",
+                    AdviceType.BATCH_BUY,
+                    f"今日估算下跌 {abs(estimated_change):.2f}%，持有收益 {holding_return_rate:.2f}% 较高，适合分批低吸降低持仓成本",
                     0.9
                 )
             elif holding_return_rate > 0:
                 return (
-                    AdviceType.TAKE_PROFIT,
-                    f"今日估算上涨 {estimated_change:.2f}%，持有收益率 {holding_return_rate:.2f}%，建议止盈部分仓位",
+                    AdviceType.BATCH_BUY,
+                    f"今日估算下跌 {abs(estimated_change):.2f}%，持有收益 {holding_return_rate:.2f}% 为正，可分批低吸",
                     0.85
                 )
-            return (
-                AdviceType.TAKE_PROFIT,
-                f"今日估算上涨 {estimated_change:.2f}%，超过 {TAKE_PROFIT_THRESHOLD}% 阈值，建议止盈部分仓位",
-                0.8
-            )
+            # 持有收益小幅亏损：可考虑低吸摊薄成本
+            elif holding_return_rate > -5:
+                return (
+                    AdviceType.BATCH_BUY,
+                    f"今日估算下跌 {abs(estimated_change):.2f}%，持有收益 {holding_return_rate:.2f}% 小幅亏损，可小额定投摊薄成本",
+                    0.75
+                )
+            # 持有收益亏损较多：谨慎观望，不宜盲目加仓
+            elif holding_return_rate > -15:
+                return (
+                    AdviceType.CAUTIOUS,
+                    f"今日估算下跌 {abs(estimated_change):.2f}%，持有收益 {holding_return_rate:.2f}% 亏损较多，建议谨慎观望，等待企稳后再考虑加仓",
+                    0.7
+                )
+            else:
+                # 持有收益亏损严重：建议谨慎
+                return (
+                    AdviceType.CAUTIOUS,
+                    f"今日估算下跌 {abs(estimated_change):.2f}%，持有收益 {holding_return_rate:.2f}% 亏损严重，不建议追加投入，考虑止损或转换",
+                    0.8
+                )
+
+        # 2. 单日大涨 >= 4% → 综合持有收益率评估
+        if estimated_change >= TAKE_PROFIT_THRESHOLD:
+            # 持有收益较高：强烈建议止盈锁定收益
+            if holding_return_rate > 15:
+                return (
+                    AdviceType.TAKE_PROFIT,
+                    f"今日估算上涨 {estimated_change:.2f}%，持有收益 {holding_return_rate:.2f}% 已较高，强烈建议止盈锁定收益",
+                    0.9
+                )
+            # 持有收益为正：建议适当止盈
+            elif holding_return_rate > 5:
+                return (
+                    AdviceType.TAKE_PROFIT,
+                    f"今日估算上涨 {estimated_change:.2f}%，持有收益 {holding_return_rate:.2f}%，建议止盈部分仓位",
+                    0.85
+                )
+            elif holding_return_rate > 0:
+                return (
+                    AdviceType.TAKE_PROFIT,
+                    f"今日估算上涨 {estimated_change:.2f}%，持有收益 {holding_return_rate:.2f}%，可考虑小幅止盈",
+                    0.8
+                )
+            # 持有收益小幅亏损：大涨是减亏机会
+            elif holding_return_rate > -5:
+                return (
+                    AdviceType.HOLD,
+                    f"今日估算上涨 {estimated_change:.2f}%，持有收益 {holding_return_rate:.2f}% 接近回本，建议持有等待进一步反弹",
+                    0.7
+                )
+            # 持有收益亏损较多：继续持有等待回本
+            else:
+                return (
+                    AdviceType.HOLD,
+                    f"今日估算上涨 {estimated_change:.2f}%，但持有收益仍亏损 {abs(holding_return_rate):.2f}%，建议继续持有等待回本机会",
+                    0.75
+                )
 
         # 3. 持有收益亏损较多 + 估值低位 + 趋势向上 → 建议加仓摊薄成本
         if (holding_return_rate < -10 and

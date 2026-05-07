@@ -244,6 +244,14 @@ class FundMonitor:
         """
         if fund_code in self.positions:
             del self.positions[fund_code]
+            # 同步清理历史数据
+            if fund_code in self.history:
+                del self.history[fund_code]
+            # 清理缓存数据
+            if fund_code in self.funds:
+                del self.funds[fund_code]
+            # 清理相关提醒
+            self.alerts = [a for a in self.alerts if a.fund_code != fund_code]
             self._save_data()
             logger.info(f"已移除基金: {fund_code}")
             return True

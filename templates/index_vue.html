@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
@@ -7,7 +7,7 @@
     <!-- Ant Design Vue样式 -->
     <link
       rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/ant-design-vue@4.2.5/dist/reset.css"
+      href="https://cdn.jsdelivr.net/npm/ant-design-vue@4.2.6/dist/reset.css"
     />
     <!-- dayjs (Ant Design Vue依赖) -->
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
@@ -21,7 +21,7 @@
     <!-- Vue 3 -->
     <script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
     <!-- Ant Design Vue -->
-    <script src="https://cdn.jsdelivr.net/npm/ant-design-vue@4.2.5/dist/antd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ant-design-vue@4.2.6/dist/antd.min.js"></script>
     <!-- ECharts -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
@@ -31,8 +31,7 @@
         box-sizing: border-box;
       }
       body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
           "Helvetica Neue", Arial, sans-serif;
         background: #f0f2f5;
         min-height: 100vh;
@@ -511,13 +510,40 @@
             >
               <a-col :span="6">
                 <a-card class="stat-card" :bordered="false">
-                  <div class="stat-title">当日预估收益</div>
+                  <div
+                    class="stat-title"
+                    style="
+                      display: flex;
+                      justify-content: space-between;
+                      align-items: center;
+                    "
+                  >
+                    <span>当日预估收益</span>
+                    <span
+                      @click="profitDisplayMode = profitDisplayMode === 'amount' ? 'percent' : 'amount'"
+                      style="
+                        cursor: pointer;
+                        opacity: 0.6;
+                        font-size: 14px;
+                        user-select: none;
+                      "
+                      :title="profitDisplayMode === 'amount' ? '切换为百分比' : '切换为金额'"
+                    >
+                      🔄
+                    </span>
+                  </div>
                   <div
                     class="stat-value"
                     :class="dailyProfit >= 0 ? 'positive' : 'negative'"
                   >
-                    ¥{{ dailyProfit >= 0 ? '+' : '' }}{{ dailyProfit.toFixed(2)
-                    }}
+                    <template v-if="profitDisplayMode === 'amount'">
+                      ¥{{ dailyProfit >= 0 ? '+' : '' }}{{
+                      dailyProfit.toFixed(2) }}
+                    </template>
+                    <template v-else>
+                      {{ dailyProfitPercent >= 0 ? '+' : '' }}{{
+                      dailyProfitPercent.toFixed(2) }}%
+                    </template>
                   </div>
                 </a-card>
               </a-col>
@@ -792,29 +818,30 @@
           v-model:open="alertModalVisible"
           title="⚠️ 风险提醒详情"
           :footer="null"
-          width="800px"
+          width="100%"
+          style="top: 0; padding: 0; max-width: 100%;"
+          :body-style="{ height: 'calc(100vh - 80px)', overflow: 'auto', padding: '24px' }"
         >
-          <a-list :dataSource="alerts" itemLayout="horizontal">
-            <template #renderItem="{ item }">
-              <a-list-item>
-                <a-list-item-meta
-                  :title="item.fund_name + ' - ' + item.alert_type"
-                  :description="item.message"
-                >
-                  <template #avatar>
-                    <a-avatar
-                      :style="{ backgroundColor: item.level === 'danger' ? '#f5222d' : '#faad14' }"
-                    >
-                      {{ getAlertIcon(item.alert_type) }}
-                    </a-avatar>
-                  </template>
-                </a-list-item-meta>
-                <template #actions>
-                  <span>{{ item.time }}</span>
-                </template>
-              </a-list-item>
-            </template>
-          </a-list>
+          <a-timeline>
+            <a-timeline-item
+              v-for="item in alerts"
+              :key="item.time"
+              :color="item.level === 'danger' ? 'red' : 'orange'"
+            >
+              <template #dot>
+                <span style="font-size: 18px">{{ getAlertIcon(item.alert_type) }}</span>
+              </template>
+              <div style="padding: 8px 0">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-weight: 600; font-size: 15px;">
+                    {{ item.fund_name }} - {{ item.alert_type }}
+                  </span>
+                  <span style="color: #999; font-size: 12px;">{{ item.time }}</span>
+                </div>
+                <div style="color: #666; margin-top: 4px;">{{ item.message }}</div>
+              </div>
+            </a-timeline-item>
+          </a-timeline>
         </a-modal>
 
         <!-- 当日榜单模态框 -->
@@ -1276,6 +1303,7 @@
           const excelInput = ref(null);
           const queryChartRef = ref(null);
           const queryPieChartRef = ref(null);
+          const profitDisplayMode = ref("amount"); // 'amount' 或 'percent'
 
           // 表单
           const addForm = reactive({
@@ -1299,8 +1327,14 @@
               .reduce(
                 (sum, f) =>
                   sum + (f.current_amount * (f.estimated_change || 0)) / 100,
-                0,
+                0
               );
+          });
+          const dailyProfitPercent = computed(() => {
+            // 当日预估收益率 = 当日预估收益 / 持仓总额 * 100
+            const total = totalPosition.value;
+            if (total === 0) return 0;
+            return (dailyProfit.value / total) * 100;
           });
           const totalPosition = computed(() => {
             return funds.value
@@ -1308,20 +1342,20 @@
               .reduce((sum, f) => sum + (f.current_amount || 0), 0);
           });
           const positionCount = computed(
-            () => funds.value.filter((f) => f.current_amount > 0).length,
+            () => funds.value.filter((f) => f.current_amount > 0).length
           );
           const avgChange = computed(() => {
             if (funds.value.length === 0) return 0;
             return (
               funds.value.reduce(
                 (sum, f) => sum + (f.estimated_change || 0),
-                0,
+                0
               ) / funds.value.length
             );
           });
           const rankList = computed(() => {
             return [...funds.value].sort(
-              (a, b) => (b.estimated_change || 0) - (a.estimated_change || 0),
+              (a, b) => (b.estimated_change || 0) - (a.estimated_change || 0)
             );
           });
           const reportSummary = computed(() => {
@@ -1518,7 +1552,7 @@
                     max_amount: editForm.maxAmount,
                     holding_return_rate: editForm.holdingReturnRate,
                   }),
-                },
+                }
               );
               const data = await res.json();
               if (data.success) {
@@ -1594,7 +1628,7 @@
             if (!queryFundCode.value) return;
             try {
               const res = await fetch(
-                `/api/fund/history/${queryFundCode.value}?period=${queryPeriod.value}`,
+                `/api/fund/history/${queryFundCode.value}?period=${queryPeriod.value}`
               );
               const data = await res.json();
               if (data.success && data.data) {
@@ -1610,7 +1644,7 @@
             if (!queryFundCode.value) return;
             try {
               const res = await fetch(
-                `/api/fund/holdings/${queryFundCode.value}`,
+                `/api/fund/holdings/${queryFundCode.value}`
               );
               const data = await res.json();
               if (data.success && data.data) {
@@ -1763,7 +1797,7 @@
                           ocrProgress.value = 30 + m.progress * 60;
                         }
                       },
-                    },
+                    }
                   );
 
                   console.log("Tesseract result text:", result.data.text);
@@ -1804,7 +1838,7 @@
                           ocrProgress.value = 50 + m.progress * 45;
                         }
                       },
-                    },
+                    }
                   );
 
                   const parseRes = await fetch("/api/ocr/parse", {
@@ -1833,7 +1867,9 @@
               if (!fund.fund_code && fund.fund_name) {
                 try {
                   const searchRes = await fetch(
-                    `/api/fund/search?keyword=${encodeURIComponent(fund.fund_name)}`,
+                    `/api/fund/search?keyword=${encodeURIComponent(
+                      fund.fund_name
+                    )}`
                   );
                   const searchData = await searchRes.json();
                   if (
@@ -1858,7 +1894,7 @@
             if (allFunds.length === 0) {
               showToast(
                 "未识别到基金信息，请尝试其他图片或手动输入",
-                "warning",
+                "warning"
               );
             }
           };
@@ -2007,7 +2043,7 @@
             if (!fund.max_amount) return 0;
             return Math.min(
               100,
-              ((fund.current_amount || 0) / fund.max_amount) * 100,
+              ((fund.current_amount || 0) / fund.max_amount) * 100
             ).toFixed(1);
           };
 
@@ -2091,11 +2127,13 @@
             queryPieChartRef,
             cardLayout,
             currentDatasource,
+            profitDisplayMode,
             // 表单
             addForm,
             editForm,
             // 计算属性
             dailyProfit,
+            dailyProfitPercent,
             totalPosition,
             positionCount,
             avgChange,
