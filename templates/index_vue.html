@@ -405,9 +405,8 @@
                   <a-space wrap>
                     <a-input
                       v-model:value="addForm.fundCode"
-                      placeholder="基金代码"
-                      style="width: 120px"
-                      maxlength="6"
+                      placeholder="代码/名称"
+                      style="width: 130px"
                     ></a-input>
                     <a-input-number
                       v-model:value="addForm.currentAmount"
@@ -426,10 +425,10 @@
                     <a-input-number
                       v-model:value="addForm.holdingReturnRate"
                       placeholder="收益率%"
-                      style="width: 110px"
+                      style="width: 80px"
                       :precision="2"
                     ></a-input-number>
-                    <a-button type="primary" @click="addFund" :loading="adding"
+                    <a-button type="primary" @click="addFund" :loading="adding || searchLoading"
                       >添加</a-button
                     >
                     <a-button @click="showQueryModal">🔍 基金查询</a-button>
@@ -842,6 +841,32 @@
               </div>
             </a-timeline-item>
           </a-timeline>
+        </a-modal>
+
+        <!-- 基金选择弹窗 -->
+        <a-modal
+          v-model:open="fundSelectModalVisible"
+          title="🔍 选择基金"
+          :footer="null"
+          width="600px"
+        >
+          <a-table
+            :data-source="fundSearchResults"
+            :pagination="false"
+            row-key="fund_code"
+            size="small"
+          >
+            <a-table-column title="基金代码" data-index="fund_code" width="100"></a-table-column>
+            <a-table-column title="基金名称" data-index="fund_name"></a-table-column>
+            <a-table-column title="基金类型" data-index="fund_type" width="120"></a-table-column>
+            <a-table-column title="操作" key="action" width="80" align="center">
+              <template #default="{ record }">
+                <a-button type="primary" size="small" @click="selectFundAndAdd(record.fund_code)">
+                  添加
+                </a-button>
+              </template>
+            </a-table-column>
+          </a-table>
         </a-modal>
 
         <!-- 当日榜单模态框 -->
@@ -1304,6 +1329,9 @@
           const queryChartRef = ref(null);
           const queryPieChartRef = ref(null);
           const profitDisplayMode = ref("amount"); // 'amount' 或 'percent'
+          const fundSelectModalVisible = ref(false);
+          const fundSearchResults = ref([]);
+          const searchLoading = ref(false);
 
           // 表单
           const addForm = reactive({
@@ -1430,16 +1458,59 @@
 
           const addFund = async () => {
             if (!addForm.fundCode) {
-              showToast("请输入基金代码", "warning");
+              showToast("请输入基金代码或名称", "warning");
               return;
             }
+            const input = addForm.fundCode.trim();
+            // 判断是否为纯数字（基金代码）
+            const isCode = /^\d{6}$/.test(input);
+
+            if (isCode) {
+              // 直接添加
+              await doAddFund(input);
+            } else {
+              // 搜索基金
+              await searchAndAddFund(input);
+            }
+          };
+
+          const searchAndAddFund = async (keyword) => {
+            searchLoading.value = true;
+            try {
+              const res = await fetch(`/api/fund/search?keyword=${encodeURIComponent(keyword)}`);
+              const data = await res.json();
+              if (data.success && data.data && data.data.length > 0) {
+                if (data.data.length === 1) {
+                  // 只有一个结果，直接添加
+                  await doAddFund(data.data[0].fund_code);
+                } else {
+                  // 多个结果，显示选择弹窗
+                  fundSearchResults.value = data.data;
+                  fundSelectModalVisible.value = true;
+                }
+              } else {
+                showToast("未找到匹配的基金", "warning");
+              }
+            } catch (e) {
+              showToast("搜索失败", "error");
+            } finally {
+              searchLoading.value = false;
+            }
+          };
+
+          const selectFundAndAdd = async (fundCode) => {
+            fundSelectModalVisible.value = false;
+            await doAddFund(fundCode);
+          };
+
+          const doAddFund = async (fundCode) => {
             adding.value = true;
             try {
               const res = await fetch("/api/funds/add", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  fund_code: addForm.fundCode,
+                  fund_code: fundCode,
                   current_amount: addForm.currentAmount || 0,
                   max_amount: addForm.maxAmount || 0,
                   holding_return_rate: addForm.holdingReturnRate || 0,
@@ -2128,6 +2199,9 @@
             cardLayout,
             currentDatasource,
             profitDisplayMode,
+            fundSelectModalVisible,
+            fundSearchResults,
+            searchLoading,
             // 表单
             addForm,
             editForm,
@@ -2145,6 +2219,7 @@
             showToast,
             refreshData,
             addFund,
+            selectFundAndAdd,
             removeFund,
             clearAllFunds,
             clearAlerts,
