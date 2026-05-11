@@ -43,3 +43,6 @@ logs/
 # 系统文件
 .DS_Store
 Thumbs.db
+
+# 发布脚本（包含敏感信息）
+deploy.sh
