@@ -8,7 +8,6 @@
 - 从天天基金网获取实时基金净值、估算净值、涨跌幅
 - 支持获取基金经理、持仓股票、最大回撤、收益率等详细数据
 - 每30秒自动刷新数据
-- 支持多数据源切换（天天基金、蛋卷基金、蚂蚁财富、且慢）
 
 ### 2. 智能监控提醒
 - 单日涨跌幅 ≥ ±1.5% 自动提醒
@@ -17,17 +16,21 @@
 - 最大回撤超过阈值自动风险提醒
 
 ### 3. 智能操作建议
-根据估值位置、趋势、回撤等综合分析生成建议：
-- **建议加仓**: 估值低位 + 趋势向上 + 回撤较小
-- **建议减仓**: 估值高位 + 连续上涨 + 回撤扩大
-- **建议持有观望**: 中期震荡 + 无明确方向
-- **建议分批低吸**: 单日大跌 ≥ 3%
-- **建议止盈部分仓位**: 单日大涨 ≥ 4%
-- **建议谨慎观望**: 基金经理变更、规模暴增等
+根据估值位置、趋势、回撤、持有收益率等综合分析生成建议：
+
+| 建议类型 | 触发条件 | 说明 |
+|----------|----------|------|
+| 🟢 建议加仓 | 估值低位 + 趋势向上 + 回撤较小 | 适合增加投资 |
+| 🔴 建议减仓 | 估值高位 + 连续上涨 + 回撤扩大 | 适合减少仓位 |
+| 🟡 建议持有观望 | 中期震荡 + 无明确方向 | 暂不操作 |
+| 🔵 建议分批低吸 | 单日大跌 ≥ 3% | 综合持有收益率评估 |
+| 🟠 建议止盈部分仓位 | 单日大涨 ≥ 4% | 综合持有收益率评估 |
+| ⚪ 建议谨慎观望 | 持有收益亏损较多 + 连续下跌 | 不宜盲目加仓 |
 
 ### 4. 持仓管理
 - 支持设置当前持仓金额和持仓上限
 - 自动计算持仓比例和预估收益
+- 支持预估收益按金额或百分比显示
 - 下午2:40自动生成操作建议报告
 
 ### 5. 图片识别同步持仓
@@ -40,38 +43,66 @@
 - 支持按估算涨跌、预估收益排序
 
 ### 7. 基金查询
-- 输入基金代码查看详细信息
+- 支持基金代码或**基金名称（中文）**查询
 - 展示净值走势图和持仓分布
+- 显示基金经理、基金规模、收益率等详情
 
 ## 快速开始
 
-### 方式一：使用启动脚本（推荐）
+### 新手必读
+
+**第一步：检查 Python 环境**
+
+打开命令提示符（按 `Win + R`，输入 `cmd`，回车），输入：
+```
+python --version
+```
+- 如果显示 `Python 3.x.x`，说明已安装，可进行下一步
+- 如果提示"不是内部或外部命令"，请先安装 Python：
+  1. 访问 https://www.python.org/downloads/
+  2. 下载 Python 3.10 或更高版本
+  3. 运行安装程序，**务必勾选 `Add Python to PATH`**
+  4. 点击 `Install Now` 完成安装
+
+**第二步：启动程序**
 
 双击运行 `start.bat`，脚本会自动：
 1. 检查 Python 环境
-2. 安装依赖
-3. 启动服务
+2. 安装所需依赖
+3. 启动 Web 服务
 
-### 方式二：手动启动
+**第三步：访问系统**
+
+启动成功后，打开浏览器访问: http://localhost:5000
+
+### 手动启动（可选）
 
 ```bash
-# 1. 安装依赖
+# 安装依赖
 pip install -r requirements.txt
 
-# 2. 启动应用
+# 启动应用
 python app.py
 ```
 
-启动后访问: http://localhost:5000
+### 使用 pip 镜像加速（网络慢时使用）
+
+```bash
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
 
 ## 使用说明
 
 ### 添加基金
-1. 输入6位基金代码（如：000001）
-2. 可选填入当前持仓金额、持仓上限、持有收益率
-3. 点击"添加基金"
+
+支持两种方式添加：
+1. **基金代码**：输入6位数字代码（如：000001）
+2. **基金名称**：输入基金名称（如：华夏成长、易方达中小盘）
+
+可选填入当前持仓金额、持仓上限、持有收益率。
 
 ### 同步持仓（图片识别）
+
 1. 点击"📥 同步持仓"按钮
 2. 上传持仓截图（支持天天基金、支付宝、券商APP）
 3. 系统自动识别基金信息和持仓金额
@@ -94,7 +125,7 @@ python app.py
 
 ### 基金查询
 - 点击"🔍 基金查询"按钮
-- 输入基金代码查看详细信息、净值走势、持仓分布
+- 输入基金代码或基金名称查看详细信息、净值走势、持仓分布
 
 ## 参数配置
 
@@ -124,10 +155,10 @@ VALUATION_LOW_THRESHOLD = -10.0
 VALUATION_HIGH_THRESHOLD = 30.0
 
 # 大跌提醒阈值（%）
-BIG_DROP_THRESHOLD = 3.0
+BATCH_BUY_THRESHOLD = -3.0
 
 # 大涨提醒阈值（%）
-BIG_RISE_THRESHOLD = 4.0
+TAKE_PROFIT_THRESHOLD = 4.0
 ```
 
 ### 其他配置
@@ -161,17 +192,22 @@ fund-monitor/
 ├── monitor.py          # 监控和提醒模块
 ├── advisor.py          # 智能建议模块
 ├── ocr_service.py      # OCR 图片识别模块
+├── ocr_config.py       # OCR 配置模块
 ├── requirements.txt    # 依赖列表
 ├── start.bat           # Windows 启动脚本
 ├── fund_data.json      # 数据存储文件（运行时自动生成）
-└── templates/
-    ├── index_vue.html      # 前端页面（Ant Design Vue版）
+├── templates/
+│   └── index_vue.html  # 前端页面
+├── static/
+│   ├── css/            # 样式文件
+│   └── js/             # JavaScript 库
+├── 快速入门.md          # 新手快速入门指南
+└── 使用指南.md          # 详细使用文档
 ```
 
 ## 访问地址
 
-- Ant Design Vue 版本: http://localhost:5000/
-- Element Plus 版本: http://localhost:5000/element
+- 主页面: http://localhost:5000/
 
 ## API 接口
 
@@ -187,12 +223,11 @@ fund-monitor/
 | `/api/fund/query/<code>` | GET | 查询单只基金详情 |
 | `/api/fund/history/<code>` | GET | 获取基金历史净值 |
 | `/api/fund/holdings/<code>` | GET | 获取基金持仓信息 |
-| `/api/fund/search` | GET | 按名称搜索基金 |
+| `/api/fund/search` | GET | 按名称搜索基金（支持中文） |
 | `/api/alerts` | GET | 获取提醒列表 |
 | `/api/alerts/clear` | POST | 清除所有提醒 |
 | `/api/advices` | GET | 获取操作建议 |
 | `/api/report` | GET | 获取下午报告 |
-| `/api/datasource` | GET/PUT | 获取/切换数据源 |
 | `/api/ocr/recognize` | POST | OCR 图片识别 |
 | `/api/ocr/parse` | POST | 解析 OCR 文本 |
 
@@ -225,6 +260,18 @@ A:
 1. Windows: 从 https://github.com/UB-Mannheim/tesseract/wiki 下载安装
 2. 安装 Python 依赖: `pip install pytesseract pillow`
 3. 如未安装到默认路径，在 `config.py` 中配置 `TESSERACT_PATH`
+
+### Q: pip 安装依赖超时怎么办？
+A: 使用国内镜像源：
+```bash
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+### Q: 启动后页面无法访问？
+A:
+1. 检查 5000 端口是否被占用
+2. 尝试关闭防火墙或添加例外规则
+3. 修改 `app.py` 最后一行的端口号
 
 ## 注意事项
 
